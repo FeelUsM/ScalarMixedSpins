@@ -2,38 +2,92 @@
 
 BeginPackage["ScalarMixedSpins`"]
 ScalarMixedSpins::usage = "package for scalar and mixed ...
-Common symbols and functions: d t p pp \[Delta] \[Epsilon] foundQ firstFound
-ExpandSigma: collectPP expandSigma pTimes expandSigTimes
-RhoGen: lastKP firstKP nextKP listKPs compoze swapToPerm generateGroup normolizeKP KPToExpr fillMap mapToExpr rhoGen
-FastTr: fastTr1 fastTr
-ExplicitMatrices: getSi getSz getSp getSm getSx getSy KP scalar mixed"
+Designations: d t p pp collectPP pTimes
+Utilities:  FE foundQ firstFound printTo plusToList
+ExplicitMatrices: getSi getSz getSp getSm getSx getSy KP scalar mixed
+RhoGen: lastKP firstKP nextKP listKPs compoze swapToPerm generateGroup normolizeKP KPToExpr invariantKPsets KPsetsToExpr rhoGen
+matrixTransform: expandSigma expandSigTimes getVectors matrixTransform coordinates
+gramMatrix: fastTr1 fastTr"
 
 (*Global Symbols*)
 d::usage = "d[s_no_1,s_no_2] - scalar prodict of 2 Pauli matrices (orderless)"
 t::usage = "t[s_no_1,s_no_2,s_no_3] - mixed prodict of 3 Pauli matrices"
 p::usage = "p[args] - my own product for d[] and t[] with order"
 pp::usage = "pp[args] - my own product for d[] and t[] without order (orderless)"
-\[Delta]::usage = "\[Delta][\[Alpha],\[Beta]] - Kronecker symbol (orderless)"
-\[Epsilon]::usage = "\[Epsilon][\[Alpha],\[Beta],\[Gamma]] - Levi-Chevita symbol"
-SetAttributes[\[Delta],Orderless]
 SetAttributes[d,Orderless]
 SetAttributes[pp,Orderless]
+collectPP::usage = "collectPP[expr] - take expr without pp[], put d[] and t[] into pp[] (orderless) and collect them"
+collectIPP::usage = "collectIPP[expr] - take expr without pp[], put d[] and \[ImaginaryI]t[] into pp[] (orderless) and collect them"
+pTimes::usage = "pTimes[exprs...] - distribute and multiply(Times) exprs by p[] (with order)"
 
 foundQ::usage = "foundQ[expr,pattern] - analog MatchQ[], but return True if found any subexpr"
 firstFound::usage = "firstFound[expr,pattern] - analog FirstPosition[], but return first founded subexpr (if not found return Missing[\"NotFound\"])"
+printTo::usage = "printTo[file,expr] - \:0432\:044b\:0432\:043e\:0434 \:0438\:0437 expr \:043f\:0435\:0440\:0435\:043d\:0430\:043f\:0440\:0430\:0432\:043b\:0435\:0442 \:0432 \:0444\:0430\:0439\:043b, \:043d\:0430\:043f\:0440\:0438\:043c\:0435\:0440 \:0432 NUL(windows) \:0438\:043b\:0438 /dev/null(unix), \:043f\:043e\:0441\:043b\:0435 \:0447\:0435\:0433\:043e \:0432\:043e\:0437\:0432\:0440\:0430\:0449\:0430\:0435\:0442 \:0440\:0435\:0437\:0443\:043b\:044c\:0442\:0430\:0442 \:0432\:044b\:0440\:0430\:0436\:0435\:043d\:0438\:044f"
+FE::usage = "(ForEach): expr1~FE~expr2 === expr2/@expr1"
+plusToLost::usage = "plusToList[expr] - return list of terms"
+myRowReduce::usage = "myRowReduce[m] - return {RowReduce[m],k} such that RowReduce[m]==k.m"
 
-collectPP::usage = "collectPP[expr] - take expr without p[] and put d[] and t[] into p[]"
 expandSigma::usage = "expandSigma[expr] - return expanded expr without p[]; input d[_,_] and t[_,_,_] must be in p[]"
-pTimes::usage = "pTimes[exprs...] - multiply exprs by p[]"
 expandSigTimes::usage = "expandSigTimes[exprs...] - multiply exprs (by p[]) and then expand it by expandSigma[]"
 (* tr[a,b] - deprecated *)
+coordinates::usage = "coordinates[vector,basis] - return {coordinates,remainder}; vector,basis and bbasis should Not be wrapped by pp[]"
+matrixTransform::usage = "matrixTransform[vectors,basis] - return {coordinates of vectors in the basis (matrix),remainders of vectors}; 
+vectors and basis should Not be wrapped by pp[]"
+getVectors::usage = "getVectors[H,basis] - multiply each vector from basis by H(from left) and return them"
 
 Begin["`Private`"]
 
+ClearAttributes[RowReduce,Protected]
+RowReduce::overflow="`1` overflow `2`"
+RowReduce[matr_,maxll_]:=Module[
+	{m=matr,maxl=maxll,h=Length[matr],l=Length[matr[[1]]],i,j,curi=1,tmp},
+	If[maxl>l,Message[RowReduce::overflow,maxl,l];maxl=l];
+	(*Monitor[*)
+		For[i=1;curi=1,i<=maxl&&curi<=h,i++,
+			For[j=curi,j<=h,j++,
+				If[m[[j,i]]=!=0,Break[]]
+			];
+			If[j>h,Continue[]];
+			If[j!=curi,tmp=m[[curi]]; m[[curi]]=m[[j]];m[[j]]=tmp];
+			m[[curi]]/=m[[curi,i]];
+			tmp=m[[;;,i]];
+			tmp[[curi]]=0;
+			For[j=1,j<=h,j++,
+				m[[j]]-=m[[curi]]*tmp[[j]];
+			];
+			curi++;
+			(*Pause[1];*)
+		(*],
+		m//MatrixPlot*)
+	];
+	m
+]
+SetAttributes[RowReduce,Protected]
+
+myRowReduce[m_]:=Module[{r=RowReduce[Transpose[Join[Transpose[m],IdentityMatrix[Length[m]]]],Length[m[[1]]]],l=Length[m[[1]]]},{r[[All,;;l]],r[[All,l+1;;]]}]
 foundQ[expr_,pattern_]:=(FirstPosition[expr,pattern]//Head//SymbolName)!="Missing"
 firstFound[expr_,pattern_]:=Module[{pos=FirstPosition[expr,pattern]},If[pos===Missing["NotFound"],pos,If[Length[pos]==0,expr,expr[[pos]]]]]
+FE[list_,fun_]:=fun/@list
+printTo[file_,expr_]:=Module[
+	{output = $Output,res},
+	If[Length[Streams[file]]==0,
+        $Output = OpenWrite[file]; (*"/dev/null" on unix or "NUL" on windows *)
+        res=expr;
+        Close[$Output];
+        $Output = output
+    ,
+        $Output = Streams[file]; (*"/dev/null" on unix or "NUL" on windows *)
+        res=expr;
+        $Output = output
+    ];
+	res
+]
+SetAttributes[printTo,HoldAll]
 
-expandSigma=Function[g,Module[{f=g,debug=False,verbose=Count[g,d[_,_]|t[_,_,_],{0,Infinity}]>500,c,cc,a,b,e,x,y,z,i,j,k,smth,smth1,smth2,aux,\[Alpha],\[Beta],forremove={}},
+expandSigma=Function[g,Module[
+	{f=g,debug=False,verbose=Count[g,d[_,_]|t[_,_,_],{0,Infinity}]>500,
+		c,cc,a,b,e,x,y,z,i,j,k,smth,smth1,smth2,aux,\[Alpha],\[Beta],forremove={},\[Epsilon],\[Delta]},
+	SetAttributes[\[Delta],Orderless]
 	If[debug,Print["input: ",f]];
 	If[foundQ[f,p[___,x_/;(!MatchQ[x,d[_,_]|t[_,_,_]]),___]],
 		Throw[{"wrong input to expandSigma",f,
@@ -123,7 +177,12 @@ expandSigma=Function[g,Module[{f=g,debug=False,verbose=Count[g,d[_,_]|t[_,_,_],{
 	If[verbose,Print["sigma expanded"]];
 	If[debug,Print["sigma expanded: ",f]];
 	If[FirstPosition[f,pp[__]]=!=Missing["NotFound"],Throw[{"internal error in expandSigma",f}]];
-	f=f/.pp[]:>1
+	f=f/.pp[]:>1;
+	f//.t[a_,b_,c_]t[k_,l_,m_]:>(Det[{
+ {d[a,k], d[b,k], d[c,k]},
+ {d[a,l], d[b,l], d[c,l]},
+ {d[a,m], d[b,m], d[c,m]}
+}])//Expand
 ]];
 
 pTimes[args___]:=(Expand/@p[args]//Distribute)//.
@@ -136,11 +195,121 @@ collectPP[arg_]:=Collect[
 		t[a_,b_,c_]pp[smth___]:>pp[t[a,b,c],smth]}
 	,pp[___]
 ]
+collectIPP[arg_]:=Collect[
+	(arg pp[]//Expand)//.{
+		d[a_,b_]pp[smth___]:>pp[d[a,b],smth],
+		I t[a_,b_,c_]pp[smth___]:>pp[I t[a,b,c],smth],
+		-I t[a_,b_,c_]pp[smth___]:>-pp[I t[a,b,c],smth],
+		Complex[0,d_] t[a_,b_,c_]pp[smth___]:>d pp[I t[a,b,c],smth]
+	},pp[___]
+]
 
 tr[arg_]:=collectPP[arg]/.pp[]->1/.pp[smth___]->0
 
 expandSigTimes[args___]:=expandSigma[pTimes[args]]
+
+coordinates1[vector_,basis_,bbasis_]:=Module[
+	{vCoord={},i,j,coef,except,flag,coef2},
+	For[i=1,i<=Length[basis],i++,
+		coef=Coefficient[vector,bbasis[[i,1]]];
+		AppendTo[vCoord,coef]
+	];
+	(*Print[Expand[vCoord.basis]," ",vCoord," ",basis];*)
+	except=vector-Expand[vCoord.basis];
+	If[except=!=0,
+		vCoord={};
+		flag=True;
+		Monitor[
+			For[i=1,i<=Length[basis],i++,
+				coef=Coefficient[vector,bbasis[[i,1]]];
+				For[j=2,j<=Length[bbasis[[i]]],j++,
+					coef2=\:0421oefficient[vector,bbasis[[i,j]]];
+					If[coef2!=coef,
+						If[flag,Print["for vector ",vector];flag=False];
+						Print["coefficient ",i," (",basis[[i]],") equals ",coef,
+							" but for subcoefficient ",j," (",bbasis[[i,j]],") equals ",coef2];
+						coef=0;
+						Break[];
+					]
+				];
+				AppendTo[vCoord,coef]
+			],
+			ProgressIndicator[i/Length[basis]]
+		];
+		except=vector-Expand[vCoord.basis];
+		If[!flag,Print["except: ",vCoord," ",except]]
+	];
+	{vCoord,except/.pp->Times}
+]
+
+plusToList[sum_]:=If[Head[sum]===Plus,List@@sum,{sum}]
+
+(*coordinates[vector_,basis_]:=coordinates1[collectPP[vector],collectPP/@basis,getBbasis[collectPP/@basis]]*)
+
+coordinates2[vector_,basis_,bbasis_,symbs_]:=Module[
+	{eqs,eqss,except,res},
+	eqs=Last[Reap[Collect[Expand[basis.symbs]-vector,bbasis,Sow];]];
+	(*Print[Expand[basis.symbs]-vector];
+	Print[bbasis];
+	Print[eqs];*)
+	{except,eqss}=If[Length[eqs[[1]]]>Length[bbasis],
+		{Last[eqs[[1]]]/.pp->Times,Delete[eqs[[1]],Length[eqs[[1]]]]},
+		{0,eqs}
+	];
+	res=Solve[Union[eqss]==0,symbs];
+	If[Length[res]==1,
+		{symbs/.res[[1]],except},
+		Print["can't decompose vector over basis"];
+		{ConstantArray[0,Length[basis]],vector}
+	]
+]
+
+coordinates[rawvector_,rawbasis_]:=Module[
+	{symbs=Unique[ConstantArray["x",Length[rawbasis]]],
+		vector=collectIPP[rawvector],
+		basis=collectIPP/@rawbasis,
+		bbasis
+	},
+	bbasis=basis/.Plus->List/.{-x_:>x,a_ pp[smth___]:>pp[smth]}//Flatten;
+	(Remove@@symbs; #)&[coordinates2[vector,basis,bbasis,symbs]]
+]
+
+
+matrixTransform[rawvectors_,rawbasis_]:=Module[
+	{bbasis,matrix={},i,vector,coord,excepts={},except,
+		basis=collectIPP/@rawbasis,
+		vectors=collectIPP/@rawvectors,
+		symbs=Unique[ConstantArray["x",Length[rawbasis]]]
+	},
+	bbasis=basis/.Plus->List/.{-x_:>x,a_ pp[smth___]:>pp[smth]}//Flatten;
+	Monitor[
+		For[i=1,i<=Length[vectors],i++,
+			vector=vectors[[i]](*printTo["NUL",expandSigTimes[H,basis[[i]]]]*);
+			{coord,except}=coordinates2[vector,basis,bbasis,symbs];
+			If[except=!=0,
+				Print[i,")"(*,except*)];
+			];
+			AppendTo[excepts,except];
+			AppendTo[matrix,coord]
+		],
+		ProgressIndicator[i/Length[vectors]]
+	];
+	Remove@@symbs;
+	{Transpose[matrix],excepts}
+]
+
+getVectors[H_,basis_]:=Module[{i,vectors={}},
+	Monitor[
+		For[i=1,i<=Length[basis],i++,
+			AppendTo[vectors,printTo["NUL",expandSigTimes[H,basis[[i]]]]];
+		],
+		ProgressIndicator[i/Length[basis]]
+	];
+	vectors
+]
+
 End[]
+
 
 (* ================================= \:0413\:0435\:043d\:0435\:0440\:0430\:0442\:043e\:0440 \:0420\:043e =============================================================== *)
 
@@ -153,8 +322,8 @@ swapToPerm::usage = "swapToPerm[swap, number_of_points] - construct permutation 
 generateGroup::usage = "generateGroup[list_of_permutations] - return group - list of all permutations which generated from specified permutations"
 normolizeKP::usage = "normolizeKP[KP] - normolize KP (to standard form)"
 KPToExpr::usage = "KPToExpr[KP] - converts KP to expr of d[] functions"
-fillMap::usage = "fillMap[number_of_pairs, number_of_spins, group] - return list of groups_of_KPs, each group_of_KP is invariant with respect to group"
-mapToExpr::usage = "mapToExpr[group_of_KPs, name_of_param] - converst list of groups_of_KPs to expr in which each groups_of_KP is parametrized by param_i, 
+invariantKPsets::usage = "invariantKPsets[number_of_pairs, number_of_spins, group] - return list of sets_of_KPs, each set_of_KP is invariant with respect to group"
+KPsetsToExpr::usage = "KPsetsToExpr[group_of_KPs, name_of_param] - converst list of groups_of_KPs to expr in which each groups_of_KP is parametrized by param_i, 
 and return {expr,list_of_params}"
 rhoGen::usage = "rhoGen[number_of_spins, generators, names_of_params] - return {Rho,list_of_params}"
 
@@ -317,6 +486,7 @@ listKPs=Function[{npair,npart},Module[{stop=firstKP[npair],tmp=firstKP[npair],re
 compoze[second_,first_]:=#/.(a_->b_):>(a->(b/.second))&/@first
 
 swapToPerm=Function[{list,length},Module[{res=<||>,a,b,i},
+	If[Head[length]=!=Integer,Throw["swapToPerm: missed second argument"]];
 	For[i=1,i<=Length[list],i++,
 		a=list[[i]]/.((x_->y_):>x);
 		b=list[[i]]/.((x_->y_):>y);
@@ -332,13 +502,12 @@ swapToPerm=Function[{list,length},Module[{res=<||>,a,b,i},
 
 generateGroup=Function[listarg,Module[{list=listarg,set=<||>,l,cur,tmp,tmp2,i},
 	While[Length[list]!=0,
-		(*Print["\:043e\:0441\:0442\:0430\:043b\:043e\:0441\:044c:",list//Length," \:0441\:0434\:0435\:043b\:0430\:043d\:043e:",set//Length];*)
-		(*Print["\:043e\:0441\:0442\:0430\:043b\:043e\:0441\:044c:",list," \:0441\:0434\:0435\:043b\:0430\:043d\:043e:",set];*)
+		(*Print["\:043e\:0441\:0442\:0430\:043b\:043e\:0441\:044c(",list//Length,"):",list," \:0441\:0434\:0435\:043b\:0430\:043d\:043e(",set//Length,"):",set];*)
 		cur=list[[1]];list=Delete[list,1];
 		If[(set[cur]//Head//SymbolName)!="Missing",Continue[]];
 		AppendTo[set,cur->1];
 		l=Length[set];
-		For[i=1,i<l,i++,
+		For[i=1,i<=l,i++,
 			(*Print[i,set];*)
 			tmp=Keys[set][[i]];
 			tmp2=compoze[tmp,cur];
@@ -369,7 +538,7 @@ KPToExpr[{llist_,hlist_}]:=Module[{res=1,ll=Length[llist]},
 	res
 ]
 
-fillMap=Function[{npair,npart,group},Module[{
+invariantKPsets=Function[{npair,npart,group},Module[{
 		gl=Length[group],
 		map(*\:0438\:0437 \:041a\:041f \:0432 \:2116 \:0433\:0440\:0443\:043f\:043f\:044b \:041a\:041f*)=<||>,
 		listGrKP={},
@@ -422,7 +591,7 @@ fillMap=Function[{npair,npart,group},Module[{
 	listGrKP
 ]];
 	
-mapToExpr=Function[{listGr,name},Module[{ngr,res=0,names={}},
+KPsetsToExpr=Function[{listGr,name},Module[{ngr,res=0,names={}},
 	For[ngr=1,ngr<=(listGr//Length),ngr++,
 		Module[{grName=Subscript[name, ngr],grRes=0,i,grKP=listGr[[ngr]]},
 			For[i=1,i<=(grKP//Length),i++,
@@ -435,10 +604,11 @@ mapToExpr=Function[{listGr,name},Module[{ngr,res=0,names={}},
 	{res,names}
 ]];
 
-rhoGen=Function[{npart,groupGens,names},Module[{(*names={a,b,c,d,e,f,g,h},*)npair=npart/2//Floor,i,res=0,group=generateGroup[groupGens],rnames={},lnames,lres},
+rhoGen=Function[{npart,groupGens,names},Module[
+	{(*names={a,b,c,d,e,f,g,h},*)npair=npart/2//Floor,i,res=0,group=generateGroup[groupGens],rnames={},lnames,lres},
 	Print["group generated"];
 	For[i=1,i<=npair,i++,
-		{lres,lnames}=mapToExpr[fillMap[i,npart,group],names[[i]]];
+		{lres,lnames}=KPsetsToExpr[invariantKPsets[i,npart,group],names[[i]]];
 		res+=lres;
 		AppendTo[rnames,lnames];
 		Print[i," pairs completed"];
@@ -450,8 +620,8 @@ End[]
 
 (* =================== fastTr ====================================================== *)
 
-fastTr1::usage = "fastTr1[expr1,expr2] each expr \:0434\:043e\:043b\:0436\:0435\:043d \:0441\:043e\:0441\:0442\:043e\:044f\:0442\:044c \:0442\:043e\:043b\:044c\:043a\:043e \:0438\:0437 d[] \:0438 t[], \:043f\:0440\:0438\:0447\:0435\:043c t[] \:0434\:043e\:043b\:0436\:0435\:043d \:0432\:0441\:0442\:0440\:0435\:0447\:0430\:0442\:044c\:0441\:044f \:043d\:0435 \:0431\:043e\:043b\:044c\:0448\:0435 \:043e\:0434\:043d\:043e\:0433\:043e \:0440\:0430\:0437\:0430"
-fastTr::usage = "fastTr[expr1,expr2]"
+fastTr1::usage = "fastTr1[expr1,expr2] each expr \:0434\:043e\:043b\:0436\:0435\:043d \:044f\:0432\:043b\:044f\:0442\:044c\:0441\:044f \:0442\:043e\:043b\:044c\:043a\:043e \:043f\:0440\:043e\:0438\:0437\:0432\:0435\:0434\:0435\:043d\:0438\:0435\:043c \:0438\:0437 d[] \:0438 t[], \:043f\:0440\:0438\:0447\:0435\:043c t[] \:0434\:043e\:043b\:0436\:0435\:043d \:0432\:0441\:0442\:0440\:0435\:0447\:0430\:0442\:044c\:0441\:044f \:043d\:0435 \:0431\:043e\:043b\:044c\:0448\:0435 \:043e\:0434\:043d\:043e\:0433\:043e \:0440\:0430\:0437\:0430"
+fastTr::usage = "fastTr[expr1,expr2] each expr \:043c\:043e\:0436\:0435\:0442 \:0431\:044b\:0442\:044c \:0441\:0443\:043c\:043c\:043e\:0439"
 
 Begin["`Private`"]
 
@@ -535,6 +705,18 @@ fastTr[lhs_,rhs_]:=(Expand/@p[lhs,rhs]//Distribute)/.p[1,1]->1/.{p[1,x_]->0,p[x_
 End[]
 
 
+(* ::InheritFromParent:: *)
+(*"package for scalar and mixed ...\nDesignations: d t p pp collectPP pTimes\nUtilities:  FE foundQ firstFound printTo\nExplicitMatrices: getSi getSz getSp getSm getSx getSy KP scalar mixed\nRhoGen: lastKP firstKP nextKP listKPs compoze swapToPerm generateGroup normolizeKP KPToExpr invariantKPsets KPsetsToExpr rhoGen\nmatrixTransform: expandSigma expandSigTimes\ngramMatrix: fastTr1 fastTr"*)
+
+
+(* ::InheritFromParent:: *)
+(*"invariantKPsets[number_of_pairs, number_of_spins, group] - return list of sets_of_KPs, each set_of_KP is invariant with respect to group"*)
+
+
+(* ::InheritFromParent:: *)
+(*"KPsetsToExpr[group_of_KPs, name_of_param] - converst list of groups_of_KPs to expr in which each groups_of_KP is parametrized by param_i, \nand return {expr,list_of_params}"*)
+
+
 getSi::usage = "getSi[l] - return identity matrix for spin l"
 getSz::usage = "getSz[l] - return Sz matrix for spin l"
 getSp::usage = "getSp[l] - return S+ matrix for spin l"
@@ -542,8 +724,14 @@ getSm::usage = "getSm[l] - return S- matrix for spin l"
 getSx::usage = "getSx[l] - return Sx matrix for spin l"
 getSy::usage = "getSy[l] - return Sy matrix for spin l"
 KP::usage = "KP=KroneckerProduct"
-scalar::usage = "scalar[l,N,{n1,n2}] - return scalar product of vectors of spin matrices of spins n1 and n2; all number of spins = N, maximum spin = l"
-mixed::usage = "mixed[l,N,{n1,n2,n3}] - return mixed product of vectors of spin matrices of spins n1, n2 and n3; all number of spins = N, maximum spin = l"
+scalar::usage = "scalar[l,N,{n1,n2}] - return scalar product of vectors of doubled spin matrices of spins n1 and n2; all number of spins = N, maximum spin = l"
+mixed::usage = "mixed[l,N,{n1,n2,n3}] - return mixed product of vectors of doubled spin matrices of spins n1, n2 and n3; all number of spins = N, maximum spin = l"
+scalarSparse::usage = "scalarSparse[l,N,{n1,n2}] - return scalar product of vectors of doubled spin sparse matrices of spins n1 and n2; 
+all number of spins = N, maximum spin = l"
+mixedSparse::usage = "mixedSparse[l,N,{n1,n2,n3}] - return mixed product of vectors of doubled spin sparse matrices of spins n1, n2 and n3; 
+all number of spins = N, maximum spin = l"
+explicit::usage = "explicit[l,N,expr] - transform expr to explicit matrix form"
+explicitSparse::usage = "explicitSparse[l,N,expr] - transform expr to explicit sparse matrix form"
 
 Begin["`Private`"]
 
@@ -554,13 +742,57 @@ getSm[l_]:=If[l==0,m,Array[If[#1==#2+1,Sqrt[(l+(l+1-#2))(l-(l+1-#2)+1)],0]&,{2l+
 getSx[l_]:=If[l==0,x,(getSp[l]+getSm[l])/2]
 getSy[l_]:=If[l==0,y,(getSp[l]-getSm[l])/2/I]
 KP=KroneckerProduct;
-scalar[l_,N_,{n1_,n2_}]:=Module[{si=getSi[l],sxyz={getSx[l],getSy[l],getSz[l]},i},Sum[KP@@Array[If[#==n1||#==n2,sxyz[[i]],si]&,{N}],{i,1,3}]]
+scalar[l_,N_,{n1_,n2_}]:=Module[{si=getSi[l],sxyz={getSx[l],getSy[l],getSz[l]},i},
+	If[n1>N||n2>N,Throw[{"numbers of spins ",n1,n2," more than max ",N}]];
+	4*Sum[KP@@Array[If[#==n1||#==n2,sxyz[[i]],si]&,{N}],{i,1,3}]
+]
 mixed[l_,N_,{n1_,n2_,n3_}]:=Module[{si=getSi[l],sxyz={getSx[l],getSy[l],getSz[l]},i,j,k},
-	Sum[Signature[{i,j,k}]KP@@Array[Switch[#,n1,sxyz[[i]],n2,sxyz[[j]],n3,sxyz[[k]],_,si]&,{N}],{i,1,3},{j,1,3},{k,1,3}]]
+	If[n1>N||n2>N||n3>N,Throw[{"numbers of spins ",n1,n2,n3," more than max ",N}]];
+	8*Sum[Signature[{i,j,k}]KP@@Array[Switch[#,n1,sxyz[[i]],n2,sxyz[[j]],n3,sxyz[[k]],_,si]&,{N}],{i,1,3},{j,1,3},{k,1,3}]
+]
+scalarSparse[l_,N_,{n1_,n2_}]:=Module[{si=SparseArray[getSi[l]],sxyz=SparseArray/@{getSx[l],getSy[l],getSz[l]},i},
+	If[n1>N||n2>N,Throw[{"numbers of spins ",n1,n2," more than max ",N}]];
+	4*Sum[KP@@Array[If[#==n1||#==n2,sxyz[[i]],si]&,{N}],{i,1,3}]//SparseArray
+]
+mixedSparse[l_,N_,{n1_,n2_,n3_}]:=Module[{si=SparseArray[getSi[l]],sxyz=SparseArray/@{getSx[l],getSy[l],getSz[l]},i,j,k},
+	If[n1>N||n2>N||n3>N,Throw[{"numbers of spins ",n1,n2,n3," more than max ",N}]];
+	8*Sum[Signature[{i,j,k}]KP@@Array[Switch[#,n1,sxyz[[i]],n2,sxyz[[j]],n3,sxyz[[k]],_,si]&,{N}],{i,1,3},{j,1,3},{k,1,3}]//SparseArray
+]
+
+explicit[l_,N_,expr_]:=collectPP[expr]/.{pp[]:>pp[KP@@Array[getSi[l]&,{N}]],d[i_,j_]:>scalar[l,N,{i,j}],t[i_,j_,k_]:>mixed[l,N,{i,j,k}]}/.pp->Dot
+explicitSparse[l_,N_,expr_]:=collectPP[expr]/.{pp[]:>pp[KP@@Array[SparseArray[getSi[l]]&,{N}]],d[i_,j_]:>scalarSparse[l,N,{i,j}],t[i_,j_,k_]:>mixedSparse[l,N,{i,j,k}]}/.
+	pp->Dot//SparseArray
 
 End[]
 
 EndPackage[]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
