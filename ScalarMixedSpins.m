@@ -12,12 +12,12 @@ gramMatrix: fastTr1 fastTr"
 (*Global Symbols*)
 d::usage = "d[s_no_1,s_no_2] - scalar prodict of 2 Pauli matrices (orderless)"
 t::usage = "t[s_no_1,s_no_2,s_no_3] - mixed prodict of 3 Pauli matrices"
+it::isage = "it[a,b,c] == \[ImaginaryI] t[a,b,c]; use expr/.t[a_,b_,c_]:>-\[ImaginaryI] it[a,b,c]"
 p::usage = "p[args] - my own product for d[] and t[] with order"
 pp::usage = "pp[args] - my own product for d[] and t[] without order (orderless)"
 SetAttributes[d,Orderless]
 SetAttributes[pp,Orderless]
 collectPP::usage = "collectPP[expr] - take expr without pp[], put d[] and t[] into pp[] (orderless) and collect them"
-collectIPP::usage = "collectIPP[expr] - take expr without pp[], put d[] and \[ImaginaryI]t[] into pp[] (orderless) and collect them"
 pTimes::usage = "pTimes[exprs...] - distribute and multiply(Times) exprs by p[] (with order)"
 
 foundQ::usage = "foundQ[expr,pattern] - analog MatchQ[], but return True if found any subexpr"
@@ -195,14 +195,6 @@ collectPP[arg_]:=Collect[
 		t[a_,b_,c_]pp[smth___]:>pp[t[a,b,c],smth]}
 	,pp[___]
 ]
-collectIPP[arg_]:=Collect[
-	(arg pp[]//Expand)//.{
-		d[a_,b_]pp[smth___]:>pp[d[a,b],smth],
-		I t[a_,b_,c_]pp[smth___]:>pp[I t[a,b,c],smth],
-		-I t[a_,b_,c_]pp[smth___]:>-pp[I t[a,b,c],smth],
-		Complex[0,d_] t[a_,b_,c_]pp[smth___]:>d pp[I t[a,b,c],smth]
-	},pp[___]
-]
 
 tr[arg_]:=collectPP[arg]/.pp[]->1/.pp[smth___]->0
 
@@ -317,11 +309,13 @@ lastKP::usage = "lastKP[number_of_pairs, number_of_spins] - return last KP"
 firstKP::usage = "firstKP[number_of_pairs] - return first KP"
 nextKP::usage = "nextKP[KP, number_of_spins] - return next KP"
 listKPs::usage = "listKPs[number_of_pairs, number_of_spins] - return list of all KPs"
+listKPTs::usage = "listKPTs[number_of_pairs, number_of_spins] - return list of all KPs transformed to expr multiplied by it[_._._]"
 compoze::usage = "compoze[first_permutation, second_permutation] - multiply two permutations"
 swapToPerm::usage = "swapToPerm[swap, number_of_points] - construct permutation from swap"
 generateGroup::usage = "generateGroup[list_of_permutations] - return group - list of all permutations which generated from specified permutations"
 normolizeKP::usage = "normolizeKP[KP] - normolize KP (to standard form)"
 KPToExpr::usage = "KPToExpr[KP] - converts KP to expr of d[] functions"
+invariantKPTsets::usage = "invariantKPTsets[number_of_pairs, number_of_spins, group] - like invariantKPsets, but KPs - exprs with it[_,_,_]"
 invariantKPsets::usage = "invariantKPsets[number_of_pairs, number_of_spins, group] - return list of sets_of_KPs, each set_of_KP is invariant with respect to group"
 KPsetsToExpr::usage = "KPsetsToExpr[group_of_KPs, name_of_param] - converst list of groups_of_KPs to expr in which each groups_of_KP is parametrized by param_i, 
 and return {expr,list_of_params}"
@@ -482,6 +476,20 @@ listKPs=Function[{npair,npart},Module[{stop=firstKP[npair],tmp=firstKP[npair],re
 	];
 	res
 ]];
+listKPTs[p_,n_]:=Module[{set=Range[n],KPset=Range[n-3],KPs},
+	If[2p+3>n,Throw["wrong arguments for listKPTs"]];
+	If[p==0,
+		(*Print["p==0"];*)
+		Subsets[set,{3}]~FE~(it@@#&)
+	,
+		(*Print["p!=0"];*)
+		KPs=listKPs[p,n-3]~FE~KPToExpr;
+		(*Print[KPs];*)
+		Subsets[set,{3}]~FE~Function[{tt},
+			(KPs/.MapThread[#1->#2&,{KPset,Complement[set,tt]}])it@@tt
+		]//Flatten
+	]
+]
 
 compoze[second_,first_]:=#/.(a_->b_):>(a->(b/.second))&/@first
 
@@ -538,14 +546,15 @@ KPToExpr[{llist_,hlist_}]:=Module[{res=1,ll=Length[llist]},
 	res
 ]
 
-invariantKPsets=Function[{npair,npart,group},Module[{
+invariantKPTsets[npair_,npart_,group_]:=Module[{
 		gl=Length[group],
 		map(*\:0438\:0437 \:041a\:041f \:0432 \:2116 \:0433\:0440\:0443\:043f\:043f\:044b \:041a\:041f*)=<||>,
 		listGrKP={},
 		grKP,
-		stopKP=firstKP[npair],
-		stopSize=npart!/(2 npair)!/(npart-2npair)!*(2npair-1)!!,
-		curKP=firstKP[npair],
+		KPTs=listKPTs[npair,npart],
+		stopSize=(npart-3)!/(2 npair)!/((npart-3)-2 npair)!*(2 npair-1)!!*npart!/3!/(npart-3)!,
+		curKP,
+		curKPn=1,
 		tmp,
 		noGrKP,
 		stop=0,
@@ -554,18 +563,72 @@ invariantKPsets=Function[{npair,npart,group},Module[{
 		res=0
 	},
 	(*Print[stopSize,"  ",gl];*)
+	curKP = KPTs[[curKPn]];
+	(*Print[KPTs];*)
+	While[
+		Label[loopStart1];
+		(*Print["loop start"];*)
+		If[stop++>=stopLoop,Print["looped"];Return[looped]];
+		If[(map[curKP]//Head//SymbolName)!="Missing",(* \:0442\:0435\:043a\:0443\:0449\:0430\:044f \:041a\:041f \:0443\:0436\:0435 \:043d\:0430\:0445\:043e\:0434\:0438\:0442\:0441\:044f \:0432 \:043a\:0430\:043a\:043e\:0439-\:0442\:043e \:0433\:0440\:0443\:043f\:043f\:0435 *)
+			(*Print["continue:",curKP];*)
+			curKP = KPTs[[++curKPn]]; (* \:043f\:0435\:0440\:0435\:0445\:043e\:0434\:0438\:043c \:043a \:0441\:043b\:0435\:0434\:0443\:044e\:0449\:0435\:0439 \:041a\:041f *)
+			Goto[loopStart1](*Continue[]*)
+		];
+		grKP={}; (* \:0441\:043e\:0437\:0434\:0430\:0435\:043c \:043d\:043e\:0432\:0443\:044e \:0433\:0440\:0443\:043f\:043f\:0443 \:041a\:041f *)
+		noGrKP=Length[listGrKP]+1; (* \:0435\:0435 \:043d\:043e\:043c\:0435\:0440 *)
+		For[i=1,i<=gl,i++, (* \:0433\:0435\:043d\:0435\:0440\:0438\:0440\:0443\:0435\:043c \:0433\:0440\:0443\:043f\:043f\:0443 *)
+			tmp=(curKP/.group[[i]]);
+			(*Print["before norm:",tmp,i," ",gl];*)
+			tmp=tmp/.it[x___/;!OrderedQ[{x}]]:>Signature[it[x]]Sort[it[x]];
+			(*Print["after norm:",tmp,i," ",gl];*)
+			(*If[stop++\[GreaterEqual]stopLoop,Print["looped"];Return[looped]];*)
+			
+			If[(map[tmp]//Head//SymbolName)=="Missing",
+				AppendTo[map,tmp->noGrKP]; (* map - \:043a\:0430\:0436\:0434\:043e\:0439 \:041a\:041f \:0441\:043e\:043f\:043e\:0441\:0442\:0430\:0432\:043b\:044f\:0435\:0442\:0441\:044f \:043d\:043e\:043c\:0435\:0440 \:0433\:0440\:0443\:043f\:043f\:044b \:041a\:041f \:0432 \:043a\:043e\:0442\:043e\:0440\:043e\:0439 \:043e\:043d\:0430 \:043d\:0430\:0445\:043e\:0434\:0438\:0442\:0441\:044f *)
+				AppendTo[grKP,tmp]
+			]
+		];
+		AppendTo[listGrKP,Plus@@grKP];
+		curKP = KPTs[[++curKPn]];
+	
+		(*Print["---"];
+		Print[noGrKP,grKP,"   ",curKPn,"=?=",Length[KPTs]];
+		Print[map,Length[map]," ",stopSize];*)
+	
+		If[Length[map]>stopSize,Return[Error]];
+		(*Print[Length[map]<stopSize&&curKP!=stopKP(*DoWhile*)];*)
+		Length[map]<stopSize&&curKPn!=Length[KPTs](*DoWhile*)
+	];
+	listGrKP
+];
+invariantKPsets=Function[{npair,npart,group},Module[{
+		gl=Length[group],
+		map(*\:0438\:0437 \:041a\:041f \:0432 \:2116 \:0433\:0440\:0443\:043f\:043f\:044b \:041a\:041f*)=<||>,
+		listGrKP={},
+		grKP,
+		stopKP=firstKP[npair],
+		stopSize=npart!/(2 npair)!/(npart-2 npair)!*(2 npair-1)!!,
+		curKP=firstKP[npair],
+		tmp,
+		noGrKP,
+		stop=0,
+		stopLoop=Infinity, (* \:043e\:0442\:043b\:0430\:0434\:043e\:0447\:043d\:043e\:0435 *)
+		i,
+		res=0
+	},
+	(*Print[stopSize,"  ",gl];*)
 	While[
 		Label[loopStart];
 		(*Print["loop start"];*)
 		If[stop++>=stopLoop,Print["looped"];Return[looped]];
-		If[(map[curKP]//Head//SymbolName)!="Missing",
+		If[(map[curKP]//Head//SymbolName)!="Missing",(* \:0442\:0435\:043a\:0443\:0449\:0430\:044f \:041a\:041f \:0443\:0436\:0435 \:043d\:0430\:0445\:043e\:0434\:0438\:0442\:0441\:044f \:0432 \:043a\:0430\:043a\:043e\:0439-\:0442\:043e \:0433\:0440\:0443\:043f\:043f\:0435 *)
 			(*Print["continue:",curKP];*)
-			curKP=nextKP[curKP,npart];
+			curKP=nextKP[curKP,npart]; (* \:043f\:0435\:0440\:0435\:0445\:043e\:0434\:0438\:043c \:043a \:0441\:043b\:0435\:0434\:0443\:044e\:0449\:0435\:0439 \:041a\:041f *)
 			Goto[loopStart](*Continue[]*)
 		];
-		grKP={};
-		noGrKP=Length[listGrKP]+1;
-		For[i=1,i<=gl,i++,
+		grKP={}; (* \:0441\:043e\:0437\:0434\:0430\:0435\:043c \:043d\:043e\:0432\:0443\:044e \:0433\:0440\:0443\:043f\:043f\:0443 \:041a\:041f *)
+		noGrKP=Length[listGrKP]+1; (* \:0435\:0435 \:043d\:043e\:043c\:0435\:0440 *)
+		For[i=1,i<=gl,i++, (* \:0433\:0435\:043d\:0435\:0440\:0438\:0440\:0443\:0435\:043c \:0433\:0440\:0443\:043f\:043f\:0443 *)
 			tmp=(curKP/.group[[i]]);
 			(*Print["before norm:",tmp,i," ",gl];*)
 			tmp=tmp//normolizeKP;
@@ -573,7 +636,7 @@ invariantKPsets=Function[{npair,npart,group},Module[{
 			(*If[stop++\[GreaterEqual]stopLoop,Print["looped"];Return[looped]];*)
 			
 			If[(map[tmp]//Head//SymbolName)=="Missing",
-				AppendTo[map,tmp->noGrKP];
+				AppendTo[map,tmp->noGrKP]; (* map - \:043a\:0430\:0436\:0434\:043e\:0439 \:041a\:041f \:0441\:043e\:043f\:043e\:0441\:0442\:0430\:0432\:043b\:044f\:0435\:0442\:0441\:044f \:043d\:043e\:043c\:0435\:0440 \:0433\:0440\:0443\:043f\:043f\:044b \:041a\:041f \:0432 \:043a\:043e\:0442\:043e\:0440\:043e\:0439 \:043e\:043d\:0430 \:043d\:0430\:0445\:043e\:0434\:0438\:0442\:0441\:044f *)
 				AppendTo[grKP,tmp]
 			]
 		];
@@ -766,6 +829,12 @@ explicitSparse[l_,N_,expr_]:=collectPP[expr]/.{pp[]:>pp[KP@@Array[SparseArray[ge
 End[]
 
 EndPackage[]
+
+
+
+
+
+
 
 
 
