@@ -2,12 +2,12 @@
 
 BeginPackage["ScalarMixedSpins`"]
 ScalarMixedSpins::usage = "package for scalar and mixed ...
-Designations: d t p pp collectPP pTimes
-Utilities:  FE foundQ firstFound printTo plusToList
-ExplicitMatrices: getSi getSz getSp getSm getSx getSy KP scalar mixed
-RhoGen: lastKP firstKP nextKP listKPs compoze swapToPerm generateGroup normolizeKP KPToExpr invariantKPsets KPsetsToExpr rhoGen
-matrixTransform: expandSigma expandSigTimes getVectors matrixTransform coordinates
-gramMatrix: fastTr1 fastTr"
+Designations(7): d t it p pp collectPP pTimes
+Utilities(5):  FE foundQ firstFound printTo plusToList
+ExplicitMatrices(13): getSi getSz getSp getSm getSx getSy KP scalar scalarSparse mixed mixedSparse explicit explicitSparse
+RhoGen(14): lastKP firstKP nextKP listKPs compoze swapToPerm generateGroup normolizeKP KPToExpr invariantKPsets KPsetsToExpr rhoGen invariantKPTsets listKPTs
+Symbolic(7): expandSigma expandSigTimes getVectors coordinates matrixTransform fullCoordinates(...) fullTransform(...) fastTr1 fastTr gramMatrix(...) symGramMatrix(...)
+Linerear algebra(2): RowReduceUpTo RowReduceUpToShow RowReduceInfo LinDeps ApplyLinDeps"
 
 (*Global Symbols*)
 d::usage = "d[s_no_1,s_no_2] - scalar prodict of 2 Pauli matrices (orderless)"
@@ -17,7 +17,7 @@ p::usage = "p[args] - my own product for d[] and t[] with order"
 pp::usage = "pp[args] - my own product for d[] and t[] without order (orderless)"
 SetAttributes[d,Orderless]
 SetAttributes[pp,Orderless]
-collectPP::usage = "collectPP[expr] - take expr without pp[], put d[] and t[] into pp[] (orderless) and collect them"
+collectPP::usage = "collectPP[expr] - take expr without pp[], put d[] and t[] and it[] into pp[] (orderless) and collect them"
 pTimes::usage = "pTimes[exprs...] - distribute and multiply(Times) exprs by p[] (with order)"
 
 foundQ::usage = "foundQ[expr,pattern] - analog MatchQ[], but return True if found any subexpr"
@@ -64,7 +64,12 @@ RowReduce[matr_,maxll_]:=Module[
 ]
 SetAttributes[RowReduce,Protected]
 
-myRowReduce[m_]:=Module[{r=RowReduce[Transpose[Join[Transpose[m],IdentityMatrix[Length[m]]]],Length[m[[1]]]],l=Length[m[[1]]]},{r[[All,;;l]],r[[All,l+1;;]]}]
+myRowReduce[m_]:=Module[{
+	r=RowReduce[Transpose[Join[Transpose[m],IdentityMatrix[Length[m]]]],Length[m[[1]]]],
+	l=Length[m[[1]]]
+	},
+	{r[[All,;;l]],r[[All,l+1;;]]}
+]
 foundQ[expr_,pattern_]:=(FirstPosition[expr,pattern]//Head//SymbolName)!="Missing"
 firstFound[expr_,pattern_]:=Module[{pos=FirstPosition[expr,pattern]},If[pos===Missing["NotFound"],pos,If[Length[pos]==0,expr,expr[[pos]]]]]
 FE[list_,fun_]:=fun/@list
@@ -187,12 +192,14 @@ expandSigma=Function[g,Module[
 
 pTimes[args___]:=(Expand/@p[args]//Distribute)//.
 	p[aa___,Times[k_,smth__],bb___]:>p[aa,k,smth,bb]//.
-	p[aa___,bb_/;(!MatchQ[bb,d[_,_]]&&!MatchQ[bb,t[_,_,_]]) ,dd___]:>bb p[aa,dd]
+	p[aa___,bb_/;(!MatchQ[bb,d[_,_]]&&!MatchQ[bb,t[_,_,_]]&&!MatchQ[bb,it[_,_,_]]) ,dd___]:>bb p[aa,dd]
 
 collectPP[arg_]:=Collect[
 	(arg pp[]//Expand)//.{
 		d[a_,b_]pp[smth___]:>pp[d[a,b],smth],
-		t[a_,b_,c_]pp[smth___]:>pp[t[a,b,c],smth]}
+		t[a_,b_,c_]pp[smth___]:>pp[t[a,b,c],smth],
+		it[a_,b_,c_]pp[smth___]:>pp[it[a,b,c],smth]
+	}
 	,pp[___]
 ]
 
@@ -200,6 +207,7 @@ tr[arg_]:=collectPP[arg]/.pp[]->1/.pp[smth___]->0
 
 expandSigTimes[args___]:=expandSigma[pTimes[args]]
 
+(* Coefficient based coordinates *)
 coordinates1[vector_,basis_,bbasis_]:=Module[
 	{vCoord={},i,j,coef,except,flag,coef2},
 	For[i=1,i<=Length[basis],i++,
@@ -238,6 +246,7 @@ plusToList[sum_]:=If[Head[sum]===Plus,List@@sum,{sum}]
 
 (*coordinates[vector_,basis_]:=coordinates1[collectPP[vector],collectPP/@basis,getBbasis[collectPP/@basis]]*)
 
+(* Collect based coordinates *)
 coordinates2[vector_,basis_,bbasis_,symbs_]:=Module[
 	{eqs,eqss,except,res},
 	eqs=Last[Reap[Collect[Expand[basis.symbs]-vector,bbasis,Sow];]];
@@ -258,8 +267,8 @@ coordinates2[vector_,basis_,bbasis_,symbs_]:=Module[
 
 coordinates[rawvector_,rawbasis_]:=Module[
 	{symbs=Unique[ConstantArray["x",Length[rawbasis]]],
-		vector=collectIPP[rawvector],
-		basis=collectIPP/@rawbasis,
+		vector=collectPP[rawvector/.t[a_,b_,c_]:>-I it[a,b,c]],
+		basis=collectPP/@(rawbasis),
 		bbasis
 	},
 	bbasis=basis/.Plus->List/.{-x_:>x,a_ pp[smth___]:>pp[smth]}//Flatten;
@@ -269,8 +278,8 @@ coordinates[rawvector_,rawbasis_]:=Module[
 
 matrixTransform[rawvectors_,rawbasis_]:=Module[
 	{bbasis,matrix={},i,vector,coord,excepts={},except,
-		basis=collectIPP/@rawbasis,
-		vectors=collectIPP/@rawvectors,
+		basis=collectPP/@rawbasis,
+		vectors=collectPP/@(rawvectors/.t[a_,b_,c_]:>-I it[a,b,c]),
 		symbs=Unique[ConstantArray["x",Length[rawbasis]]]
 	},
 	bbasis=basis/.Plus->List/.{-x_:>x,a_ pp[smth___]:>pp[smth]}//Flatten;
@@ -829,6 +838,12 @@ explicitSparse[l_,N_,expr_]:=collectPP[expr]/.{pp[]:>pp[KP@@Array[SparseArray[ge
 End[]
 
 EndPackage[]
+
+
+
+
+
+
 
 
 
