@@ -3,7 +3,7 @@
 BeginPackage["ScalarMixedSpins`"]
 ScalarMixedSpins::usage = "package for scalar and mixed ...
 Designations(7): d t it p pp collectPP pTimes
-Symbolic(8): expandSigma expandSigTimes HBasis basisH coordinates matrixTransform fullCoordinates(...) fullTransform(...) 
+Symbolic(9): expandSigma expandSigTimes HBasis basisH coordinates matrixTransform fullCoordinates(...) fullTransform(...) RemBasis
 Traces(4): fastTr1 fastTr gramMatrix symGramMatrix
 RhoGen(16): lastKP firstKP nextKP listKPs compoze swapToPerm generateGroup normolizeKP KPToExpr invariantKPsets KPsetsToExpr rhoGen invariantKPTsets listKPTs allKPs depsGen
 Linerear algebra(8): RowReduceUpTo RowReduceUpToShow RowReduceInfo LinDeps ApplyLinDeps LinDependent LinIndependent DeleteReduced
@@ -74,7 +74,7 @@ End[]
 
 
 
-(* ====== Symbolic(8) ====== *)
+(* ====== Symbolic(9) ====== *)
 expandSigma::usage = "expandSigma[expr] - return expanded expr without p[]; input d[_,_] and t[_,_,_] must be in p[]"
 expandSigTimes::usage = "expandSigTimes[exprs...] - multiply exprs (by p[]) and then expand it by expandSigma[]"
 (* tr[a,b] - deprecated *)
@@ -84,6 +84,7 @@ coordinates::usage = "coordinates[vector,basis] - return {coordinates,remainder}
 matrixTransform::usage = "matrixTransform[vectors,basis] - return {coordinates of vectors in the basis (matrix),remainders of vectors};"
 fillCoordinates::usage = "...fullCoordinates[vector,basis] - return coordinates"
 fullTransform::usage = "...matrixTransform[vectors,basis] - return coordinates of vectors in the basis (matrix);"
+RemBasis::usage = "RemBasis[remainders] - return {dependencies,forbasis}"
 
 Begin["`Private`"]
 
@@ -249,10 +250,11 @@ coordinates2[vector_,basis_,bbasis_,symbs_]:=Module[
 ]
 
 coordinates[rawvector_,rawbasis_]:=Module[
-	{symbs=Unique[ConstantArray["x",Length[rawbasis]]],
-		vector=collectPP[rawvector/.t[a_,b_,c_]:>-I it[a,b,c]],
-		basis=collectPP/@(rawbasis),
-		bbasis
+	{symbs=Unique[ConstantArray["x",Length[rawbasis]]],(* \:0441\:0438\:043c\:0432\:043e\:043b\:043e\:0432 \:043f\:043e \:043a\:043e\:043b\:0438\:0447\:0435\:0441\:0442\:0432\:0443 \:044d\:043b\:0435\:043c\:0435\:043d\:0442\:043e\:0432 \:0431\:0430\:0437\:0438\:0441\:0430 *)
+		vector=collectPP[rawvector/.t[a_,b_,c_]:>-I it[a,b,c]], (* \:043f\:043e\:0434\:0433\:043e\:0442\:043e\:0432\:043b\:0435\:043d\:043d\:044b\:0439 \:0432\:0435\:043a\:0442\:043e\:0440 *)
+		basis=collectPP/@(rawbasis), (* \:043f\:043e\:0434\:0433\:043e\:0442\:043e\:0432\:043b\:0435\:043d\:043d\:044b\:0439 \:0431\:0430\:0437\:0438\:0441 *)
+		bbasis (* \:043a\:0430\:0436\:0434\:044b\:0439 \:044d\:043b\:0435\:043c\:0435\:043d\:0442 \:043f\:043e\:0434\:0433\:043e\:0442\:043e\:0432\:043b\:0435\:043d\:043d\:043e\:0433\:043e \:0431\:0430\:0437\:0438\:0441\:0430 \:0440\:0430\:0437\:0431\:0438\:0432\:0430\:0435\:043c \:043d\:0430 \:043e\:0442\:0434\:0435\:043b\:044c\:043d\:044b\:0435 \:0441\:043b\:0430\:0433\:0430\:0435\:043c\:044b\:0435 (\:0442\:0438\:043f\:0430 plusToList) 
+			\:0438 \:0432 \:043a\:0430\:0436\:0434\:043e\:043c \:0441\:043b\:0430\:0433\:0430\:0435\:043c\:043e\:043c \:043e\:0441\:0442\:0430\:0432\:043b\:044f\:0435\:043c \:0442\:043e\:043b\:044c\:043a\:043e pp[], \:0430 \:043f\:0440\:043e\:0447\:0438\:0435 \:043c\:043d\:043e\:0436\:0438\:0442\:0435\:043b\:0438 \:0443\:0434\:0430\:043b\:044f\:0435\:043c *)
 	},
 	bbasis=basis/.Plus->List/.{-x_:>x,a_ pp[smth___]:>pp[smth]}//Flatten;
 	(Remove@@symbs; #)&[coordinates2[vector,basis,bbasis,symbs]]
@@ -269,9 +271,9 @@ matrixTransform[rawvectors_,rawbasis_]:=Module[
 		For[i=1,i<=Length[vectors],i++,
 			vector=vectors[[i]](*printTo["NUL",expandSigTimes[H,basis[[i]]]]*);
 			{coord,except}=coordinates2[vector,basis,bbasis,symbs];
-			If[except=!=0,
+			(*If[except=!=0,
 				Print[i,")"(*,except*)];
-			];
+			];*)
 			AppendTo[excepts,except];
 			AppendTo[matrix,coord]
 		],
@@ -301,6 +303,30 @@ basisH[basis_,H_]:=Module[{i,vectors={}},
 	vectors
 ]
 
+RemBasis[rems_]:=Module[{
+		rems81=rems,
+		forbasis81={},
+		deps81={},
+		list,b,deps81row,rems81tmp
+	},
+	list=(If[#===0,+Infinity,#//plusToList//Length]&)/@rems81;
+	Monitor[
+		While[Min[list]<Infinity,
+			(*Print[list];*)
+			b=Position[list,Min[list]][[1,1]];
+			(*Print[Position[list,Min[list]]," b=",b];*)
+			{deps81row,rems81tmp}=matrixTransform[rems81,{rems81[[b]]}];
+			
+			AppendTo[forbasis81,rems81[[b]]];
+			rems81=rems81tmp;
+			AppendTo[deps81,deps81row[[1]]];
+			list=(If[#===0,+Infinity,#//plusToList//Length]&)/@rems81;
+		],
+		ProgressIndicator[Count[list,Infinity]/Length[list]]
+	];
+	{deps81,forbasis81}
+]
+
 End[]
 
 
@@ -313,7 +339,7 @@ RowReduceUpToShow::usage = "RowReduceUpToShow[matrix,last_col] - RowReduce[matri
 RowReduceInfo::usage = "RowReduceInfo[m] - return {RowReduce[m],k} such that RowReduce[m]==k.m"
 LinDeps::usage = "LinDeps[m] - RowReduceInfo[m][[2]] \:0438 \:043f\:043e\:043a\:0430\:0437\:044b\:0432\:0430\:0435\:0442 \:043f\:0440\:0435\:043e\:0431\:0440\:0430\:0437\:043e\:0432\:0430\:043d\:0438\:044f \:0442\:043e\:043b\:044c\:043a\:043e \:0434\:043b\:044f \:043d\:0443\:043b\:0435\:0432\:044b\:0445 \:0441\:0442\:0440\:043e\:043a RowReduce[m]"
 LinIndependent::usage = "LinIndependent[m] - return indices of coloumns, which can be basis"
-LinDependent::usage = "LinDependent[m] - return indices of coloumns, which are dependent from basis"
+LinDependent::usage = "LinDependent[m] - return indices of coloumns, which are dependent from basis (which has only one '1')"
 ApplyLinDeps::usage = "ApplyLinDeps[matrix,deps,dependent] - return matrix with removed dependencies (apply to rows)
 ApplyLinDeps[matrix,deps] - automatically find dependent rows and return {matrix without dependencies, dependent}"
 DeleteReduced::usage = "DeleteReduced[m] - delete zero rows"
@@ -406,7 +432,7 @@ DeleteReduced[m_]:=Module[{
 	Delete[m,{#}&/@Range[i,Length[m]] ]
 ]
 
-LinIndependent[m_]:=Module[{reduced=(*RowReduce[*)m(*]*),i,j,indep={}},
+LinDependent[m_]:=Module[{reduced=(*RowReduce[*)m(*]*),i,j,indep={}},
 	For[i=1;j=1,i<=Length[m] && j<=Length[m[[1]]],j++,
 		If[reduced[[i,j]]=!=0,
 			AppendTo[indep,j];
@@ -416,7 +442,7 @@ LinIndependent[m_]:=Module[{reduced=(*RowReduce[*)m(*]*),i,j,indep={}},
 	indep
 ]
 
-LinDependent[m_]:=Module[{reduced=(*RowReduce[*)m(*]*),i,j,imax=Length[m],jmax=Length[m[[1]]],dep={}},
+LinIndependent[m_]:=Module[{reduced=(*RowReduce[*)m(*]*),i,j,imax=Length[m],jmax=Length[m[[1]]],dep={}},
 	For[i=1;j=1,i<=imax && j<=jmax,j++,
 		If[reduced[[i,j]]=!=0,
 			i++
@@ -430,8 +456,8 @@ LinDependent[m_]:=Module[{reduced=(*RowReduce[*)m(*]*),i,j,imax=Length[m],jmax=L
 	dep
 ]
 
-ApplyLinDeps[matr_,deps_,xdependent_]:=Module[{
-		i,j,res={},
+ApplyLinDeps[matri_,deps_,xdependent_]:=Module[{
+		i,j,res={},matr=matri,
 		trdeps=Transpose[deps],curdep,curdepv,usedDeps={},dependent=Sort[xdependent]
 	},
 	If[Length[matr]!=Length[trdeps],Throw["Length[matr]\[NotEqual]Length[trdeps]"]];
@@ -441,6 +467,7 @@ ApplyLinDeps[matr_,deps_,xdependent_]:=Module[{
 			Throw[{"coloumn ",curdepv," is not clear"}]
 		];
 		curdep=FirstPosition[trdeps[[curdepv]],1][[1]]; (* Row number *)
+		(*Print[curdep];*)
 		If[foundQ[usedDeps,curdep],Throw[{"row ",curdep," is already used"}]];
 		AppendTo[usedDeps,curdep]; (* \:043d\:043e\:043c\:0435\:0440\:0430 \:0438\:0441\:043f\:043e\:043b\:044c\:0437\:043e\:0432\:0430\:043d\:043d\:044b\:0445 \:0437\:0430\:0432\:0438\:0441\:0438\:043c\:043e\:0441\:0442\:0435\:0439 (\:0441\:0442\:0440\:043e\:043a) *)
 		For[j=1,j<=Length[matr],j++,
@@ -458,7 +485,9 @@ ApplyLinDeps[matr_,deps_,xdependent_]:=Module[{
 ]
 
 ApplyLinDeps[matr_,deps_]:=Module[{rdeps=RowReduce[deps],dependent},
-	dependent=LinIndependent[rdeps];
+	dependent=LinDependent[rdeps];
+	(*Print[dependent];
+	Print[MatrixForm[rdeps]];*)
 	{ApplyLinDeps[matr,rdeps,dependent],dependent}
 ]
 
@@ -1082,6 +1111,12 @@ explicitSparse[l_,N_,expr_]:=collectPP[expr]/.{pp[]:>pp[KP@@Array[SparseArray[ge
 End[]
 
 EndPackage[]
+
+
+
+
+
+
 
 
 

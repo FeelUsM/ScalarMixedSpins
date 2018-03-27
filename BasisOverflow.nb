@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[   2029106,      54259]
-NotebookOptionsPosition[   2005689,      53544]
-NotebookOutlinePosition[   2006192,      53565]
-CellTagsIndexPosition[   2006103,      53560]
+NotebookDataLength[   2029800,      54273]
+NotebookOptionsPosition[   2006338,      53557]
+NotebookOutlinePosition[   2006841,      53578]
+CellTagsIndexPosition[   2006752,      53573]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -53287,7 +53287,7 @@ Cell[BoxData[
 
 Cell[BoxData["\<\"C:\\\\Users\\\\feelus\\\\Repos\\\\ScalarMixedSpins\\\\\
 overflowDeps\"\>"], "Output",
- CellChangeTimes->{3.7310856604534993`*^9}]
+ CellChangeTimes->{3.7310856604534993`*^9, 3.7310865609781*^9}]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -53527,18 +53527,31 @@ Cell[BoxData[
    "\[InvisibleSpace]", "\<\" spins ===\"\>"}],
   SequenceForm["=== ", 11, " spins ==="],
   Editable->False]], "Print",
- CellChangeTimes->{3.731086341286441*^9}],
+ CellChangeTimes->{3.731086341286441*^9, 3.731086568356913*^9}],
 
 Cell[BoxData[
  InterpretationBox[
   RowBox[{"\<\"total vectors: \"\>", "\[InvisibleSpace]", "17325"}],
   SequenceForm["total vectors: ", 17325],
   Editable->False]], "Print",
- CellChangeTimes->{3.7310863413014417`*^9}]
+ CellChangeTimes->{3.731086341286441*^9, 3.7310865683725133`*^9}],
+
+Cell[BoxData[
+ InterpretationBox[
+  RowBox[{"\<\"for gerate dependencies needed \"\>", "\[InvisibleSpace]", 
+   "21.9683208216666685075324494391679763794`9.140548025965913", 
+   "\[InvisibleSpace]", "\<\" minutes (\"\>", "\[InvisibleSpace]", "27720", 
+   "\[InvisibleSpace]", "\<\" dependencies )\"\>"}],
+  SequenceForm[
+  "for gerate dependencies needed ", 
+   21.9683208216666685075324494391679763794`9.140548025965913, " minutes (", 
+   27720, " dependencies )"],
+  Editable->False]], "Print",
+ CellChangeTimes->{3.731086341286441*^9, 3.731087891802849*^9}]
 }, Open  ]],
 
 Cell[BoxData["$Aborted"], "Output",
- CellChangeTimes->{3.7310863490248833`*^9}]
+ CellChangeTimes->{3.7310863490248833`*^9, 3.731116845753719*^9}]
 }, Open  ]]
 }, Open  ]]
 },
@@ -53559,7 +53572,7 @@ CellTagsIndex->{
 *)
 (*CellTagsIndex
 CellTagsIndex->{
- {"Info3731068636-1570258", 2006000, 53554}
+ {"Info3731068636-1570258", 2006649, 53567}
  }
 *)
 (*NotebookFileOutline
@@ -54220,45 +54233,46 @@ Cell[1991293, 53173, 107, 1, 56, "Section"],
 Cell[1991403, 53176, 4466, 101, 472, "Input"],
 Cell[CellGroupData[{
 Cell[1995894, 53281, 213, 4, 31, "Input"],
-Cell[1996110, 53287, 147, 2, 31, "Output"]
+Cell[1996110, 53287, 167, 2, 88, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[1996294, 53294, 225, 4, 31, "Input"],
+Cell[1996314, 53294, 225, 4, 31, "Input"],
 Cell[CellGroupData[{
-Cell[1996544, 53302, 575, 11, 23, "Print"],
-Cell[1997122, 53315, 537, 10, 23, "Print"],
-Cell[1997662, 53327, 860, 16, 23, "Print"],
-Cell[1998525, 53345, 864, 16, 23, "Print"],
-Cell[1999392, 53363, 562, 10, 23, "Print"]
+Cell[1996564, 53302, 575, 11, 23, "Print"],
+Cell[1997142, 53315, 537, 10, 23, "Print"],
+Cell[1997682, 53327, 860, 16, 23, "Print"],
+Cell[1998545, 53345, 864, 16, 23, "Print"],
+Cell[1999412, 53363, 562, 10, 23, "Print"]
 }, Open  ]]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[2000003, 53379, 231, 4, 31, "Input"],
+Cell[2000023, 53379, 231, 4, 31, "Input"],
 Cell[CellGroupData[{
-Cell[2000259, 53387, 328, 8, 23, "Print"],
-Cell[2000590, 53397, 293, 7, 23, "Print"],
-Cell[2000886, 53406, 615, 13, 23, "Print"],
-Cell[2001504, 53421, 619, 13, 23, "Print"],
-Cell[2002126, 53436, 317, 7, 23, "Print"]
+Cell[2000279, 53387, 328, 8, 23, "Print"],
+Cell[2000610, 53397, 293, 7, 23, "Print"],
+Cell[2000906, 53406, 615, 13, 23, "Print"],
+Cell[2001524, 53421, 619, 13, 23, "Print"],
+Cell[2002146, 53436, 317, 7, 23, "Print"]
 }, Open  ]]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[2002492, 53449, 231, 4, 31, "Input"],
+Cell[2002512, 53449, 231, 4, 31, "Input"],
 Cell[CellGroupData[{
-Cell[2002748, 53457, 268, 6, 23, "Print"],
-Cell[2003019, 53465, 235, 5, 23, "Print"],
-Cell[2003257, 53472, 560, 11, 23, "Print"],
-Cell[2003820, 53485, 562, 11, 23, "Print"],
-Cell[2004385, 53498, 260, 5, 23, "Print"]
+Cell[2002768, 53457, 268, 6, 23, "Print"],
+Cell[2003039, 53465, 235, 5, 23, "Print"],
+Cell[2003277, 53472, 560, 11, 23, "Print"],
+Cell[2003840, 53485, 562, 11, 23, "Print"],
+Cell[2004405, 53498, 260, 5, 23, "Print"]
 }, Open  ]]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[2004694, 53509, 378, 10, 72, "Input"],
+Cell[2004714, 53509, 378, 10, 72, "Input"],
 Cell[CellGroupData[{
-Cell[2005097, 53523, 249, 6, 23, "Print"],
-Cell[2005349, 53531, 218, 5, 23, "Print"]
+Cell[2005117, 53523, 271, 6, 23, "Print"],
+Cell[2005391, 53531, 240, 5, 23, "Print"],
+Cell[2005634, 53538, 560, 11, 23, "Print"]
 }, Open  ]],
-Cell[2005582, 53539, 79, 1, 64, "Output"]
+Cell[2006209, 53552, 101, 1, 64, "Output"]
 }, Open  ]]
 }, Open  ]]
 }
