@@ -20,6 +20,8 @@ plusToList::usage = "plusToList[expr] - return list of terms"
 
 Begin["`Private`"]
 
+myMonitor=Monitor;
+fakeMonitor[body_,smth_]:=body;
 foundQ[expr_,pattern_]:=(FirstPosition[expr,pattern]//Head//SymbolName)!="Missing"
 firstFound[expr_,pattern_]:=Module[{pos=FirstPosition[expr,pattern]},If[pos===Missing["NotFound"],pos,If[Length[pos]==0,expr,expr[[pos]]]]]
 FE[list_,fun_]:=fun/@list
@@ -233,7 +235,7 @@ coordinates1[vector_,basis_,bbasis_]:=Module[
 (* Collect based coordinates *)
 coordinates2[vector_,basis_,bbasis_,symbs_]:=Module[
 	{eqs,eqss,except,res},
-	eqs=Last[Reap[Collect[Expand[basis.symbs]-vector,bbasis,Sow];]];
+	eqs=Last[Reap[Collect[vector-Expand[basis.symbs],bbasis,Sow];]];
 	(*Print[Expand[basis.symbs]-vector];
 	Print[bbasis];
 	Print[eqs];*)
@@ -244,7 +246,8 @@ coordinates2[vector_,basis_,bbasis_,symbs_]:=Module[
 	res=Solve[Union[eqss]==0,symbs];
 	If[Length[res]==1,
 		{symbs/.res[[1]],except},
-		Print["can't decompose vector over basis"];
+		(*Print["can't decompose vector over basis: ",basis];*)
+		Throw[{"newbasis",bbasis/.pp[x__]:>Times[x]},"newbasis"];
 		{ConstantArray[0,Length[basis]],vector}
 	]
 ]
@@ -267,7 +270,7 @@ matrixTransform[rawvectors_,rawbasis_]:=Module[
 		symbs=Unique[ConstantArray["x",Length[rawbasis]]]
 	},
 	bbasis=basis/.Plus->List/.{-x_:>x,a_ pp[smth___]:>pp[smth]}//Flatten;
-	Monitor[
+	myMonitor[
 		For[i=1,i<=Length[vectors],i++,
 			vector=vectors[[i]](*printTo["NUL",expandSigTimes[H,basis[[i]]]]*);
 			{coord,except}=coordinates2[vector,basis,bbasis,symbs];
@@ -280,7 +283,7 @@ matrixTransform[rawvectors_,rawbasis_]:=Module[
 		ProgressIndicator[i/Length[vectors]]
 	];
 	Remove@@symbs;
-	{Transpose[matrix],excepts}
+	{Transpose[matrix](* \:0434\:043b\:044f \:043a\:0430\:0436\:0434\:043e\:0433\:043e \:0432\:0435\:043a\:0442\:043e\:0440\:0430 \:0435\:0433\:043e \:043a\:043e\:043e\:0440\:0434\:0438\:043d\:0430\:0442\:044b - \:044d\:0442\:043e \:0441\:0442\:043e\:043b\:0431\:0435\:0446 *),excepts}
 ]
 
 Hbasis[H_,basis_]:=Module[{i,vectors={}},
@@ -303,28 +306,59 @@ basisH[basis_,H_]:=Module[{i,vectors={}},
 	vectors
 ]
 
-RemBasis[rems_]:=Module[{
-		rems81=rems,
-		forbasis81={},
-		deps81={},
-		list,b,deps81row,rems81tmp
+RemBasis[remsin_]:=Module[{
+		rems=remsin,
+		forbasis={},
+		deps={},
+		list,b,depsrow,remstmp,tmp,c,i,j,newdeps,newtmp2
 	},
-	list=(If[#===0,+Infinity,#//plusToList//Length]&)/@rems81;
+	list=(If[#===0,+Infinity,#//plusToList//Length]&)/@rems;
 	Monitor[
+		myMonitor=fakeMonitor;
 		While[Min[list]<Infinity,
 			(*Print[list];*)
 			b=Position[list,Min[list]][[1,1]];
 			(*Print[Position[list,Min[list]]," b=",b];*)
-			{deps81row,rems81tmp}=matrixTransform[rems81,{rems81[[b]]}];
-			
-			AppendTo[forbasis81,rems81[[b]]];
-			rems81=rems81tmp;
-			AppendTo[deps81,deps81row[[1]]];
-			list=(If[#===0,+Infinity,#//plusToList//Length]&)/@rems81;
-		],
+			tmp=Catch[{depsrow,remstmp}=matrixTransform[rems,{rems[[b]]}],"newbasis"];
+			If[Head[tmp]===List && Length[tmp]===2 && tmp[[1]]==="newbasis",
+				(*Print[tmp];*)
+				{depsrow,remstmp}=matrixTransform[rems,tmp[[2]]];
+				(*Print[depsrow//MatrixForm];Print[tmp[[2]]//TableForm];*)
+				(*Print[depsrow//TableForm];*)
+				newdeps={}; newtmp2={};
+				For[i=1,i<=Length[depsrow],i++,
+					(*\:043e\:0442\:043d\:043e\:0440\:043c\:0438\:0440\:043e\:0432\:0430\:0442\:044c \:0441\:0442\:0440\:043e\:043a\:0438 \:043c\:0430\:0442\:0440\:0438\:0446\:044b depsrow \:043f\:043e \:043f\:0435\:0440\:0432\:044b\:043c \:043d\:0435\:043d\:0443\:043b\:0435\:0432\:044b\:043c \:044d\:043b\:0435\:043c\:0435\:043d\:0442\:0430\:043c (\:0432\:043c\:0435\:0441\:0442\:0435 \:0441 \:0441\:043e\:043e\:0442\:0432. \:0431\:0430\:0437\:0438\:0441\:043d\:044b\:043c\:0438 \:0432\:0435\:043a\:0442\:043e\:0440\:0430\:043c\:0438)*)
+					c=Position[depsrow[[i]],_?(#=!=0&)][[2,1]];
+					tmp[[2,i]]*=depsrow[[i,c]];
+					depsrow[[i]]/=depsrow[[i,c]];
+					(*\:0441\:0433\:0440\:0443\:043f\:043f\:0438\:0440\:043e\:0432\:0430\:0442\:044c \:043e\:0434\:0438\:043d\:0430\:043a\:043e\:0432\:044b\:0435 \:0441\:0442\:0440\:043e\:043a\:0438 \:0438 \:0441\:043e\:043e\:0442\:0432. \:0431\:0430\:0437\:0438\:0441\:043d\:044b\:0435 \:0432\:0435\:043a\:0442\:043e\:0440\:0430*)
+					For[j=1,j<=Length[newdeps],j++,
+						If[newdeps[[j]]===depsrow[[i]],
+							newtmp2[[j]]+=tmp[[2,i]];
+							Break[];
+						]
+					];
+					If[j>Length[newdeps],
+						AppendTo[newdeps,depsrow[[i]]];
+						AppendTo[newtmp2,tmp[[2,i]]];
+					]
+				];
+				(*Print[depsrow//MatrixForm];	Print[tmp[[2]]//TableForm];
+				Print[newdeps//MatrixForm];	Print[newtmp2//TableForm];*)
+				forbasis=Join[forbasis,newtmp2];
+				deps=Join[deps,newdeps];
+			,
+				AppendTo[forbasis,rems[[b]]];
+				AppendTo[deps,depsrow[[1]]];
+			];
+			rems=remstmp;
+			list=(If[#===0,+Infinity,#//plusToList//Length]&)/@rems;
+		];
+		myMonitor=Monitor;
+		,
 		ProgressIndicator[Count[list,Infinity]/Length[list]]
 	];
-	{deps81,forbasis81}
+	{deps,forbasis}
 ]
 
 End[]
@@ -1111,6 +1145,15 @@ explicitSparse[l_,N_,expr_]:=collectPP[expr]/.{pp[]:>pp[KP@@Array[SparseArray[ge
 End[]
 
 EndPackage[]
+
+
+
+
+
+
+
+
+
 
 
 
