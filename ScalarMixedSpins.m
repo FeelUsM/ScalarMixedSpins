@@ -769,7 +769,7 @@ normolizeKP[{llist_,hlist_}]:=Module[{l=Length[llist],a,b,tmplist={},tllist={},t
 	{tllist,thlist}
 ];
 
-KPToExpr[{llist_,hlist_}]:=Module[{res=1,ll=Length[llist]},
+KPToExpr[{llist_,hlist_}]:=Module[{res=1,ll=Length[llist],i},
 	For[i=1,i<=ll,i++,
 		res*=d[llist[[i]],hlist[[i]]]
 	];
@@ -816,7 +816,7 @@ KPSets=Function[{npair,npart,makeGroupSet},Module[{
 ]];
 invariantKPsets[npair_,npart_,group_]:=Module[{
 	makeGroupSet,
-	gl=Length[group],
+	gl=Length[group]
 },
 	makeGroupSet[curKP_]:=Module[{grKP,i,tmp,map=<||>},
 		grKP={}; (* \:0441\:043e\:0437\:0434\:0430\:0435\:043c \:043d\:043e\:0432\:0443\:044e \:0433\:0440\:0443\:043f\:043f\:0443 \:041a\:041f *)
@@ -836,29 +836,42 @@ invariantKPsets[npair_,npart_,group_]:=Module[{
 	];
 	KPSets[npair,npart,makeGroupSet]
 ];
-squareInvariantKPsets[npair_,npart_,pos2n_]:=Module[{
+squareInvariantKPsets[npair_,pos2n_]:=Module[{
 	makeGroupSet,
+	npart=Max[pos2n],
 	n2pos=ConstantArray[0,Max[pos2n]],
 	imax=Length[pos2n],jmax=Length[pos2n[[1]]],
 	i,j
 },
 	For[i=1,i<=Length[pos2n],i++,
 		For[j=1,j<=Length[pos2n[[1]]],j++,
-			If[pos2n[[i,j]]=!=0,n2pos[[pos2n[[i,j]]]={i,j}]]
+			If[pos2n[[i,j]]=!=0,n2pos[[pos2n[[i,j]]]]={i,j}]
 		]
 	];
-	makeGroupSet[curKP_]:=Module[{grKP,tmp,map=<||>,jTrans},
+	makeGroupSet[curKP_]:=Module[{grKP,tmp,iMin,jMin,map=<||>(*\:043d\:0430 \:0441\:0430\:043c\:043e\:043c \:0434\:0435\:043b\:0435 set*),ijTrans,iInv,jInv,ijSwap},
 		grKP={}; (* \:0441\:043e\:0437\:0434\:0430\:0435\:043c \:043d\:043e\:0432\:0443\:044e \:0433\:0440\:0443\:043f\:043f\:0443 \:041a\:041f *)
 		(* \:043a\:043f \:0437\:0430\:043f\:0438\:0441\:044b\:0432\:0430\:0435\:043c \:043a\:043e\:043e\:0440\:0434\:0438\:043d\:0430\:0442\:0430\:043c\:0438 \:0430 \:043d\:0435 \:043d\:043e\:043c\:0435\:0440\:0430\:043c\:0438 *)
-		ijTrans[kp_,il_,jl_]:=Module[{cont=True,nkp=kp},
+		ijTrans[kp_,il_,jl_]:=Module[{i,j,nkp,flag},
 			(* \:0435\:0441\:043b\:0438 \:043d\:0430\:0447\:0430\:043b\:044c\:043d\:0430\:044f \:041a\:041f \:043d\:0430\:0445\:043e\:0434\:0438\:0442\:0441\:044f \:0432 map, \:0442\:043e \:0432\:044b\:0445\:043e\:0434\:0438\:043c 
 				for i=0, i\[LessEqual]il
 					for j=0, j\[LessEqual]jl
 						\:0434\:043e\:0431\:0430\:0432\:043b\:044f\:0435\:043c (\:0442\:0430\:043a, \:0447\:0442\:043e \:043a \:043a\:043e\:043e\:0440\:0434\:0438\:043d\:0430\:0442\:0430\:043c \:043f\:0440\:0438\:0431\:0430\:0432\:043b\:044f\:0435\:043c {i,j}) \:0432 map
 						\:0434\:043e\:0431\:0430\:0432\:043b\:044f\:0435\:043c (\:0442\:0430\:043a, \:0447\:0442\:043e \:043a \:043a\:043e\:043e\:0440\:0434\:0438\:043d\:0430\:0442\:0430\:043c \:043f\:0440\:0438\:0431\:0430\:0432\:043b\:044f\:0435\:043c {i,j}) \:0432 grKP (\:0435\:0441\:043b\:0438 \:0432\:0441\:0435 \:043a\:043e\:043e\:0440\:0434\:0438\:043d\:0430\:0442\:044b \:043f\:0435\:0440\:0435\:0432\:043e\:0434\:044f\:0442\:0441\:044f \:0432 \:043d\:0435\:043d\:0443\:043b\:0435\:0432\:044b\:0435 \:043d\:043e\:043c\:0435\:0440\:0430),
 			*)
+			If[(map[kp]//Head//SymbolName)==="Missing",
+				For[i=0,i<=imax-il,i++,
+					For[j=0,j<=jmax-jl,j++,
+						nkp=kp/.{ii_Integer,jj_Integer}:>{ii+i,jj+j};
+						If[(map[nkp]//Head//SymbolName)=!="Missing",Throw[Error]];
+						AppendTo[map,nkp->True];
+						flag=True;
+						nkp=nkp/.{ii_Integer,jj_Integer}:>(If[pos2n[[ii,jj]]==0,flag=False];pos2n[[ii,jj]]);
+						If[flag,AppendTo[grKP,nkp//normolizeKP]];
+					]
+				]
+			]
 		];
-		jInv[kp_,il_]:=Module[{cont=True,nkp=kp},
+		jInv[kp_,il_]:=Module[{jl},
 			(* \:0435\:0441\:043b\:0438 \:043d\:0430\:0447\:0430\:043b\:044c\:043d\:0430\:044f \:041a\:041f \:043d\:0430\:0445\:043e\:0434\:0438\:0442\:0441\:044f \:0432 map, \:0442\:043e \:0432\:044b\:0445\:043e\:0434\:0438\:043c, \:0438\:043d\:0430\:0447\:0435 
 				ijTrans \:041a\:041f,
 				\:043d\:0430\:0439\:0442\:0438 \:043c\:0430\:043a\:0441\:0438\:043c\:0430\:043b\:044c\:043d\:0443\:044e \:0432\:0442\:043e\:0440\:0443\:044e \:043a\:043e\:043e\:0440\:0434\:0438\:043d\:0430\:0442\:0443
@@ -866,8 +879,13 @@ squareInvariantKPsets[npair_,npart_,pos2n_]:=Module[{
 				\:0438 \:043d\:043e\:0440\:043c\:043e\:043b\:0438\:0437\:043e\:0432\:0430\:0442\:044c \:043a\:0430\:043a nomalizeKP, \:0442\:043e\:043b\:044c\:043a\:043e \:0441\:0440\:0430\:0432\:043d\:0435\:043d\:0438\:0435 \:0441\:043d\:0430\:0447\:0430\:043b\:0430 i, \:043f\:043e\:0442\:043e\:043c j - \:043f\:0440\:043e\:0432\:0435\:0440\:0438\:0442\:044c \:0441\:0442\:0430\:043d\:0434\:0430\:0440\:0442\:043d\:044b\:0439 nomalizeKP
 				ijTrans \:041a\:041f,
 			*)
+			If[(map[kp]//Head//SymbolName)==="Missing",
+				jl=Max[kp/.{i_Integer,j_Integer}:>j//Flatten];
+				ijTrans[kp,il,jl];
+				ijTrans[kp/.{i_Integer,j_Integer}:>{i,-j+1+jl}//normolizeKP,il,jl]
+			]
 		];
-		iInv[kp_]:=Module[{cont=True,nkp=kp},
+		iInv[kp_]:=Module[{il},
 			(* \:0435\:0441\:043b\:0438 \:043d\:0430\:0447\:0430\:043b\:044c\:043d\:0430\:044f \:041a\:041f \:043d\:0430\:0445\:043e\:0434\:0438\:0442\:0441\:044f \:0432 map, \:0442\:043e \:0432\:044b\:0445\:043e\:0434\:0438\:043c, \:0438\:043d\:0430\:0447\:0435 
 				jInv \:041a\:041f,
 				\:043d\:0430\:0439\:0442\:0438 \:043c\:0430\:043a\:0441\:0438\:043c\:0430\:043b\:044c\:043d\:0443\:044e \:043f\:0435\:0440\:0432\:0443\:044e \:043a\:043e\:043e\:0440\:0434\:0438\:043d\:0430\:0442\:0443
@@ -875,15 +893,25 @@ squareInvariantKPsets[npair_,npart_,pos2n_]:=Module[{
 				\:0438 \:043d\:043e\:0440\:043c\:043e\:043b\:0438\:0437\:043e\:0432\:0430\:0442\:044c \:043a\:0430\:043a nomalizeKP, \:0442\:043e\:043b\:044c\:043a\:043e \:0441\:0440\:0430\:0432\:043d\:0435\:043d\:0438\:0435 \:0441\:043d\:0430\:0447\:0430\:043b\:0430 i, \:043f\:043e\:0442\:043e\:043c j
 				jInv \:041a\:041f,
 			*)
+			If[(map[kp]//Head//SymbolName)==="Missing",
+				il=Max[kp/.{i_Integer,j_Integer}:>i//Flatten];
+				jInv[kp,il];
+				jInv[kp/.{i_Integer,j_Integer}:>{-i+1+il,j}//normolizeKP,il]
+			]
 		];
-		ijSwap[kp_]:=Module[{cont=True,nkp=kp},
+		ijSwap[kp_]:=Module[{},
 			(* iInv \:041a\:041f,
 				\:0443 \:043a\:0430\:0436\:0434\:043e\:0439 \:0442\:043e\:0447\:043a\:0438 \:043f\:043e\:043c\:0435\:043d\:044f\:0442\:044c \:043c\:0435\:0441\:0442\:0430\:043c\:0438 \:043a\:043e\:043e\:0440\:0434\:0438\:043d\:0430\:0442\:044b
 				\:0438 \:043d\:043e\:0440\:043c\:043e\:043b\:0438\:0437\:043e\:0432\:0430\:0442\:044c \:043a\:0430\:043a nomalizeKP, \:0442\:043e\:043b\:044c\:043a\:043e \:0441\:0440\:0430\:0432\:043d\:0435\:043d\:0438\:0435 \:0441\:043d\:0430\:0447\:0430\:043b\:0430 i, \:043f\:043e\:0442\:043e\:043c j
 				iInv \:041a\:041f,
 			*)
+			iInv[kp];
+			iInv[kp/.{i_Integer,j_Integer}:>{j,i}//normolizeKP];
 		];
-
+		tmp=curKP/.n_Integer:>n2pos[[n]]//normolizeKP;
+		iMin=Min[tmp/.{i_Integer,j_Integer}:>i//Flatten];
+		jMin=Min[tmp/.{i_Integer,j_Integer}:>j//Flatten];
+		ijSwap[tmp/.{i_Integer,j_Integer}:>{i+1-iMin,j+1-jMin}];
 		grKP
 	];
 	KPSets[npair,npart,makeGroupSet]
@@ -899,7 +927,7 @@ KPTsets[npair_,npart_,makeGroupSet_]:=Module[{
 		curKPn=1,
 		noGrKP,
 		stop=0,
-		stopLoop=Infinity,
+		stopLoop=Infinity
 	},
 	(*Print[stopSize,"  ",gl];*)
 	curKP = KPTs[[curKPn]];
@@ -931,7 +959,7 @@ KPTsets[npair_,npart_,makeGroupSet_]:=Module[{
 ];
 invariantKPTsets[npair_,npart_,group_]:=Module[{
 	makeGroupSet,
-	gl=Length[group],
+	gl=Length[group]
 },
 	makeGroupSet[curKP_]:=Module[{grKP,i,tmp,map=<||>},
 		grKP={}; (* \:0441\:043e\:0437\:0434\:0430\:0435\:043c \:043d\:043e\:0432\:0443\:044e \:0433\:0440\:0443\:043f\:043f\:0443 \:041a\:041f *)
@@ -1270,6 +1298,9 @@ explicitSparse[l_,N_,expr_]:=collectPP[expr]/.{pp[]:>pp[KP@@Array[SparseArray[ge
 End[]
 
 EndPackage[]
+
+
+
 
 
 
