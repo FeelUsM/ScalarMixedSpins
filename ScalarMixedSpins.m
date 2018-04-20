@@ -6,7 +6,7 @@ Designations(7): d t it p pp collectPP pTimes
 Symbolic(9): expandSigma expandSigTimes HBasis basisH coordinates matrixTransform fullCoordinates(...) fullTransform(...) RemBasis
 Traces(4): fastTr1 fastTr fastTr10 gramMatrix symGramMatrix
 RhoGen(16): lastKP firstKP nextKP listKPs compoze swapToPerm generateGroup normolizeKP KPToExpr invariantKPsets squareInvariantKPsets KPsetsToExpr rhoGen invariantKPTsets listKPTs allKPs depsGen
-Linerear algebra(8): RowReduceUpTo RowReduceUpToShow RowReduceInfo LinDeps ApplyLinDeps LinDependent LinIndependent DeleteReduced
+Linerear algebra(10): RowSimplify RowReduceUpTo RowReduceUpToShow RowReduceInfo LinDeps ApplyLinDeps LinDependent LinIndependent DeleteReduced
 ExplicitMatrices(13): getSi getSz getSp getSm getSx getSy KP scalar scalarSparse mixed mixedSparse explicit explicitSparse
 Utilities(5):  FE foundQ firstFound printTo plusToList getInt"
 
@@ -25,7 +25,6 @@ firstFound[expr_,pattern_]:=Module[{pos=FirstPosition[expr,pattern]},If[pos===Mi
 FE[list_,fun_]:=fun/@list;
 plusToList[sum_]:=If[Head[sum]===Plus,List@@sum,{sum}];
 getInt[sum_]:=Module[{tmp=sum//plusToList//First},If[Head[tmp]===Integer,tmp,0]];
-timesToList[sum_]:=If[Head[sum]===Times,List@@sum,{sum}];
 myMonitor=Monitor;
 fakeMonitor[body_,smth_]:=body;
 printTo[file_,expr_]:=Module[
@@ -367,9 +366,10 @@ End[]
 
 
 
-(* ====== Linerear algebra(8) ====== *)
+(* ====== Linerear algebra(10) ====== *)
 
 (* LinDeps ApplyLinDeps *)
+RowSimplify::usage = "RowSimplify[matrix,step] - cycle { m[[;;i]]=m[[;;i]]//RowReduce//Simplify } , where i increases by step each iteration"
 RowReduceUpTo::usage = "RowReduceUpTo[matrix,last_col] - RowReduce[matrix] and stop reducing at last coloumn"
 RowReduceUpToShow::usage = "RowReduceUpToShow[matrix,last_col] - RowReduce[matrix] and stop reducing at last coloumn and show process"
 RowReduceInfo::usage = "RowReduceInfo[m] - return {RowReduce[m],k} such that RowReduce[m]==k.m"
@@ -382,6 +382,16 @@ DeleteReduced::usage = "DeleteReduced[m] - delete zero rows"
 
 Begin["`Private`"]
 
+RowSimplify[inmatr_,step_]:=Module[{m=inmatr,i},
+	Monitor[
+		For[i=step,i<=Length[m],i+=step,
+			m[[;;i]]=m[[;;i]]//RowReduce//Simplify
+		],
+		ProgressIndicator[i/Length[m]]
+	];
+	m//RowReduce//Simplify
+];
+
 RowReduceUpTo::overflow="`1` overflow `2`"
 RowReduceUpTo[matr_,maxll_]:=Module[
 	{m=matr,maxl=maxll,h=Length[matr],l=Length[matr[[1]]],i,j,curi=1,tmp},
@@ -389,7 +399,7 @@ RowReduceUpTo[matr_,maxll_]:=Module[
 	Monitor[
 		For[i=1;curi=1,i<=maxl&&curi<=h,i++, (* i -horizontal; curi - vertical *) 
 			For[j=curi,j<=h,j++,
-				If[m[[j,i]]=!=0,Break[]]
+				If[m[[j,i]]!=0,Break[]]
 			];
 			If[j>h,Continue[]];
 			If[j!=curi,tmp=m[[curi]]; m[[curi]]=m[[j]];m[[j]]=tmp];
@@ -545,7 +555,7 @@ generateGroup::usage = "generateGroup[list_of_permutations] - return group - lis
 normolizeKP::usage = "normolizeKP[KP] - normolize KP (to standard form)"
 KPToExpr::usage = "KPToExpr[KP] - converts KP to expr of d[] functions"
 invariantKPsets::usage = "invariantKPsets[number_of_pairs, number_of_spins, group] - return list of sets_of_KPs, each set_of_KP is invariant with respect to group"
-squareInvariantKPsets::usage = "squareInvariantKPsets[number_of_pairs, number_of_spins,cluster] - 
+squareInvariantKPsets::usage = "squareInvariantKPsets[number_of_pairs, cluster] - 
 return list of sets_of_KPs, each set_of_KP is invariant with respect to translation group of cluster"
 invariantKPTsets::usage = "invariantKPTsets[number_of_pairs, number_of_spins, group] - like invariantKPsets, but KPs - exprs with it[_,_,_]"
 KPsetsToExpr::usage = "KPsetsToExpr[group_of_KPs, name_of_param] - converst list of groups_of_KPs to expr in which each groups_of_KP is parametrized by param_i, 
@@ -1155,6 +1165,7 @@ rmChain=Function[{expr1x,expr2x,startx},Module[{expr1=expr1x,expr2=expr2x,start=
 	{expr2,expr1,oldstart,count-1}
 ]];
 
+timesToList[sum_]:=If[Head[sum]===Times,List@@sum,{sum}];
 fastTr1=Function[{lhs2,rhs2},Module[{lhs1=timesToList[lhs2],rhs1=timesToList[rhs2],
 		lhs=1,rhs=1,lcoef=1,rcoef=1,tmp1={},tmp2={},start,stop,used,tl,tr,count,i,accum
 	},
@@ -1226,82 +1237,97 @@ fastTr1=Function[{lhs2,rhs2},Module[{lhs1=timesToList[lhs2],rhs1=timesToList[rhs
 		accum*lcoef*rcoef
 	]
 ]];
-fastTr[lhs_,rhs_]:=(Expand/@p[lhs,rhs]//Distribute)/.p[l_,r_]:>fastTr1[l,r];
+fastTr[lhs_,rhs_]:=(Expand/@p[lhs,rhs]//Distribute)/.p[l_,r_]:>If[
+	Count[l,d[_,_]]!=Count[r,d[_,_]] || Count[l,t[_,_,_]]!=Count[r,t[_,_,_]],0,fastTr1[l,r]];
 (*fastTr[lhs_,rhs_]:=(Expand/@p[lhs,rhs]//Distribute)/.p[1,1]->1/.{p[1,x_]->0,p[x_,1]->0}/.
 	p[l_,r_]:>p[q[l]//.q[aa___,Times[k_,smth__],bb___]:>q[aa,k,smth,bb] , q[r]//.q[aa___,Times[k_,smth__],bb___]:>q[aa,k,smth,bb]]//.
 	{p[lhs1_,q[aa___,bb_/;(!MatchQ[bb,d[_,_]]&&!MatchQ[bb,t[_,_,_]]) ,dd___]]:>bb p[lhs1,q[aa,dd]],
 	p[q[aa___,bb_/;(!MatchQ[bb,d[_,_]]&&!MatchQ[bb,t[_,_,_]]) ,dd___],rhs1_]:>bb p[q[aa,dd],rhs1]}/.q[arg___]:>Times[arg]/.
 	p[1,1]:>1/.{p[1,x_]:>0,p[x_,1]:>0}/.p[l_,r_]:>fastTr1[l,r]
 *)
-
+traceRules={
+	p[pp[lsmth___ ,d[a1_,a2_]],
+	pp[rsmth___,d[a1_,a2_]]]:>
+	3 p[pp[lsmth],pp[rsmth]],
+	p[pp[lsmth___ ,d[a1_,a2_],d[a3_,a4_]],
+	pp[rsmth___,d[a2_,a3_],d[a4_,a1_]]]:>
+	3 p[pp[lsmth],pp[rsmth]],
+	p[pp[lsmth___ ,d[a1_,a2_],d[a3_,a4_],d[a5_,a6_]],
+	pp[rsmth___,d[a2_,a3_],d[a4_,a5_],d[a6_,a1_]]]:>
+	3 p[pp[lsmth],pp[rsmth]],
+	p[pp[lsmth___ ,d[a1_,a2_],d[a3_,a4_],d[a5_,a6_],d[a7_,a8_]],
+	pp[rsmth___,d[a2_,a3_],d[a4_,a5_],d[a6_,a7_],d[a8_,a1_]]]:>
+	3 p[pp[lsmth],pp[rsmth]],
+	p[pp[lsmth___ ,d[a1_,a2_],d[a3_,a4_],d[a5_,a6_],d[a7_,a8_],d[a9_,a10_]],
+	pp[rsmth___,d[a2_,a3_],d[a4_,a5_],d[a6_,a7_],d[a8_,a9_],d[a10_,a1_]]]:>
+	3 p[pp[lsmth],pp[rsmth]],
+	p[pp[lsmth___ ,d[a1_,a2_],d[a3_,a4_],d[a5_,a6_],d[a7_,a8_],d[a9_,a10_],d[a11_,a12_]],
+	pp[rsmth___,d[a2_,a3_],d[a4_,a5_],d[a6_,a7_],d[a8_,a9_],d[a10_,a11_],d[a12_,a1_]]]:>
+	3 p[pp[lsmth],pp[rsmth]],
+	p[pp[lsmth___ ,d[a1_,a2_],d[a3_,a4_],d[a5_,a6_],d[a7_,a8_],d[a9_,a10_],d[a11_,a12_],d[a13_,a14_]],
+	pp[rsmth___,d[a2_,a3_],d[a4_,a5_],d[a6_,a7_],d[a8_,a9_],d[a10_,a11_],d[a12_,a13_],d[a14_,a1_]]]:>
+	3 p[pp[lsmth],pp[rsmth]]
+}
 fastTr10[lhs_,rhs_]:=(Expand/@p[lhs,rhs]//Distribute)/.
 	p[l_,r_]:>p[If[Head[l]===Times,pp@@l,pp[l]],If[Head[r]===Times,pp@@r,pp[r]]]/.
 	p[l_,r_]:>Module[{
 		ld=Count[l,d[_,_],{1}],
 		lt=Count[l,t[_,_,_],{1}],
 		rd=Count[r,d[_,_],{1}],
-		rt=Count[r,t[_,_,_],{1}]
+		rt=Count[r,t[_,_,_],{1}],
+		lc,tmp=p[l,r]
 	},
 	If[
 		ld!=rd || lt!=rt,
 		0,
 		If[Sort[Flatten[Cases[l,d[_,_]|t[_,_,_]]/.{d[a_,b_]:>{a,b},t[a_,b_,c_]:>{a,b,c}}]]!=
 			Sort[Flatten[Cases[r,d[_,_]|t[_,_,_]]/.{d[a_,b_]:>{a,b},t[a_,b_,c_]:>{a,b,c}}]],
-			0,
+			0
+		,
 			If[lt!=0,
-				fastTr1[Times@@l,Times@@r],
-				p[l,r]//.
-					p[pp[lsmth___ ,d[a1_,a2_]],
-					pp[rsmth___,d[a1_,a2_]]]:>
-					3 p[pp[lsmth],pp[rsmth]]//.
-					p[pp[lsmth___ ,d[a1_,a2_],d[a3_,a4_]],
-					pp[rsmth___,d[a2_,a3_],d[a4_,a1_]]]:>
-					3 p[pp[lsmth],pp[rsmth]]//.
-					p[pp[lsmth___ ,d[a1_,a2_],d[a3_,a4_],d[a5_,a6_]],
-					pp[rsmth___,d[a2_,a3_],d[a4_,a5_],d[a6_,a1_]]]:>
-					3 p[pp[lsmth],pp[rsmth]]//.
-					p[pp[lsmth___ ,d[a1_,a2_],d[a3_,a4_],d[a5_,a6_],d[a7_,a8_]],
-					pp[rsmth___,d[a2_,a3_],d[a4_,a5_],d[a6_,a7_],d[a8_,a1_]]]:>
-					3 p[pp[lsmth],pp[rsmth]]//.
-					p[pp[lsmth___ ,d[a1_,a2_],d[a3_,a4_],d[a5_,a6_],d[a7_,a8_],d[a9_,a10_]],
-					pp[rsmth___,d[a2_,a3_],d[a4_,a5_],d[a6_,a7_],d[a8_,a9_],d[a10_,a1_]]]:>
-					3 p[pp[lsmth],pp[rsmth]]//.
-					p[pp[lsmth___ ,d[a1_,a2_],d[a3_,a4_],d[a5_,a6_],d[a7_,a8_],d[a9_,a10_],d[a11_,a12_]],
-					pp[rsmth___,d[a2_,a3_],d[a4_,a5_],d[a6_,a7_],d[a8_,a9_],d[a10_,a11_],d[a12_,a1_]]]:>
-					3 p[pp[lsmth],pp[rsmth]]//.
-					p[pp[lsmth___ ,d[a1_,a2_],d[a3_,a4_],d[a5_,a6_],d[a7_,a8_],d[a9_,a10_],d[a11_,a12_],d[a13_,a14_]],
-					pp[rsmth___,d[a2_,a3_],d[a4_,a5_],d[a6_,a7_],d[a8_,a9_],d[a10_,a11_],d[a12_,a13_],d[a14_,a1_]]]:>
-					3 p[pp[lsmth],pp[rsmth]]     /.
-				pp[smth___]:>Times[smth]/.
-				p[x_,y_]:>x y
+				fastTr1[Times@@l,Times@@r]
+			,
+				Print["fastTr10-begin: ",tmp];
+				For[lc=1,lc<=ld,lc++,
+					Print["   before: lc=",lc," ld=",ld," tmp=",tmp];
+					tmp=(tmp//.traceRules[[lc]]);
+					ld=Count[tmp[[1]],d[_,_],{1}];
+					Print["   after:  lc=",lc," ld=",ld," tmp=",tmp];
+				];
+				Print["fastTr10-end: ",tmp];
+				(*tmp=tmp//.traceRules[[1;;ld]];*)
+				tmp/.pp[smth___]:>Times[smth]/.p[x_,y_]:>x y
 			]
 		]
 	]]
 
 gramMatrix[lhs_,rhs_]:=Module[{l},
-	Monitor[Array[(l=#1;fastTr10[lhs[[#1]],rhs[[#2]]])&,{lhs//Length,rhs//Length}],ProgressIndicator[l/Length[lhs]]]
+	Monitor[Array[(l=#1;fastTr[lhs[[#1]],rhs[[#2]]])&,{lhs//Length,rhs//Length}],ProgressIndicator[l/Length[lhs]]]
 ]
 
-symGramMatrix[vecs_]:=Module[{
-		m=ConstantArray[0,{vecs//Length,vecs//Length}],
+symGramMatrix[lvecs_,rvecs_]:=Module[{
+		m=ConstantArray[0,{lvecs//Length,rvecs//Length}],
 		i,j,p=0
 	},
+	If[lvecs!=rvecs,Throw["lvecs\[NotEqual]rvecs"]];
 	Monitor[
-		For[i=1,i<=Length[vecs],i++,
-			For[j=i,j<=Length[vecs],j++;p++,
+		For[i=1,i<=Length[lvecs],i++,
+			For[j=i,j<=Length[lvecs],j++;p++,
 				(*Print["Tr ",vecs[[i]]," * ",vecs[[j]]," = ",];*)
-				m[[i,j]]=fastTr10[vecs[[i]],vecs[[j]]]
+				m[[i,j]]=fastTr[lvecs[[i]],rvecs[[j]]]
 			]
 		]
-	,ProgressIndicator[p/(Length[vecs]*(Length[vecs]+1)/2)]
+	,ProgressIndicator[p/(Length[lvecs]*(Length[lvecs]+1)/2)]
 	];
-	For[i=2,i<=Length[vecs],i++,
+	For[i=2,i<=Length[lvecs],i++,
 		For[j=1,j<i,j++,
 			m[[i,j]]=m[[j,i]]
 		]
 	];
 	m
 ]
+
+symGramMatrix[lvecs_]:=symGramMatrix[lvecs,lvecs]
 
 End[]
 
@@ -1369,6 +1395,15 @@ explicitSparse[l_,N_,expr_]:=collectPP[expr]/.{pp[]:>pp[KP@@Array[SparseArray[ge
 End[]
 
 EndPackage[]
+
+
+
+
+
+
+
+
+
 
 
 
