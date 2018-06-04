@@ -317,9 +317,9 @@ RemBasis[remsin_]:=Module[{
 	Monitor[
 		myMonitor=fakeMonitor;
 		While[Min[list]<Infinity,
-			(*Print[list];*)
-			b=Position[list,Min[list]][[1,1]];
-			(*Print[Position[list,Min[list]]," b=",b];*)
+										(*Print[list];*)
+			b=Position[list,Min[list],{1}][[1,1]];
+										(*Print[Position[list,Min[list],{1}]," b=",b];*)
 			tmp=Catch[{depsrow,remstmp}=matrixTransform[rems,{rems[[b]]}],"newbasis"];
 			If[Head[tmp]===List && Length[tmp]===2 && tmp[[1]]==="newbasis",
 				(*Print[tmp];*)
@@ -750,23 +750,37 @@ swapToPerm=Function[{list,length},Module[{res=<||>,a,b,i},
 	Normal[res]//Sort
 ]];
 
-generateGroup=Function[listarg,Module[{list=listarg,set=<||>,l,cur,tmp,tmp2,i},
+generateGroup=Function[listarg,Module[{list=listarg,set=<||>,res={},l,cur,tmp,tmp2,i,xl,xr},
+	(*Print[list];*)
+	For[i=1,i<=Length[list],i++,
+		AppendTo[set,list[[i]]->i]
+	];
+	Monitor[
 	While[Length[list]!=0,
-		(*Print["\:043e\:0441\:0442\:0430\:043b\:043e\:0441\:044c(",list//Length,"):",list," \:0441\:0434\:0435\:043b\:0430\:043d\:043e(",set//Length,"):",set];*)
+		(*Print["\:043e\:0441\:0442\:0430\:043b\:043e\:0441\:044c(",list//Length,"):",list];
+		Print["\:0440\:0430\:0441\:0441\:043c\:043e\:0442\:0440\:0435\:043d\:043e(",set//Length,"):",set];
+		Print["\:0441\:0434\:0435\:043b\:0430\:043d\:043e(",res//Length,"):",res];*)
 		cur=list[[1]];list=Delete[list,1];
-		If[(set[cur]//Head//SymbolName)!="Missing",Continue[]];
-		AppendTo[set,cur->1];
-		l=Length[set];
+		(*Print["current: " ,cur];*)
+		AppendTo[res,cur];
+		l=Length[res];
 		For[i=1,i<=l,i++,
 			(*Print[i,set];*)
-			tmp=Keys[set][[i]];
-			tmp2=compoze[tmp,cur];
-			If[(set[tmp2]//Head//SymbolName)=="Missing",AppendTo[list,tmp2]];
-			tmp2=compoze[cur,tmp];
-			If[(set[tmp2]//Head//SymbolName)=="Missing",AppendTo[list,tmp2]];
-		]
+			tmp=res[[i]];
+			tmp2=compoze[tmp,cur]; (*Print["check ",tmp2];*)
+			If[(set[tmp2]//Head//SymbolName)=="Missing",
+				AppendTo[set,tmp2->{set[tmp],set[cur]}];AppendTo[list,tmp2](*;Print["Append ",tmp2]*)
+			];
+			tmp2=compoze[cur,tmp]; (*Print["check ",tmp2];*)
+			If[(set[tmp2]//Head//SymbolName)=="Missing",
+				AppendTo[set,tmp2->{set[cur],set[tmp]}];AppendTo[list,tmp2](*;Print["Append ",tmp2]*)
+			];
+		];
+		(*Pause[1];*)
 	];
-	Keys[set]//Sort
+	,ProgressIndicator[Length[res]/Length[set]]];
+	(*Keys[set]//Sort*)
+	set
 ]];
 
 normolizeKP[{llist_,hlist_}]:=Module[{l=Length[llist],a,b,tmplist={},tllist={},thlist={},i},
@@ -1395,6 +1409,12 @@ explicitSparse[l_,N_,expr_]:=collectPP[expr]/.{pp[]:>pp[KP@@Array[SparseArray[ge
 End[]
 
 EndPackage[]
+
+
+
+
+
+
 
 
 
