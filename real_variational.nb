@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[     32208,        961]
-NotebookOptionsPosition[     29997,        881]
-NotebookOutlinePosition[     30643,        906]
-CellTagsIndexPosition[     30517,        900]
+NotebookDataLength[     36516,       1089]
+NotebookOptionsPosition[     34075,       1001]
+NotebookOutlinePosition[     34723,       1026]
+CellTagsIndexPosition[     34595,       1020]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -877,6 +877,126 @@ Cell[BoxData[
    TableForm[BoxForm`e$]]]], "Output",
  CellChangeTimes->{3.746888718788581*^9, 3.746892255568857*^9, 
   3.746939520500939*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"Solve", "[", 
+  RowBox[{
+   RowBox[{
+    RowBox[{
+     SuperscriptBox["b0", "2"], "+", 
+     RowBox[{"6", " ", 
+      SuperscriptBox["b12", "2"]}], "+", 
+     RowBox[{"6", " ", 
+      SuperscriptBox["b13", "2"]}], "+", 
+     RowBox[{"3", " ", 
+      SuperscriptBox["b14", "2"]}], "+", 
+     RowBox[{"3", " ", 
+      SuperscriptBox["b23", "2"]}], "+", 
+     RowBox[{"9", " ", 
+      SuperscriptBox["bb1", "2"]}], "+", 
+     RowBox[{"6", " ", "bb1", " ", "bb2"}], "+", 
+     RowBox[{"9", " ", 
+      SuperscriptBox["bb2", "2"]}], "+", 
+     RowBox[{"6", " ", "bb1", " ", "bb3"}], "+", 
+     RowBox[{"6", " ", "bb2", " ", "bb3"}], "+", 
+     RowBox[{"9", " ", 
+      SuperscriptBox["bb3", "2"]}]}], "\[Equal]", 
+    RowBox[{"1", "/", "16"}]}], ",", 
+   RowBox[{"{", "b0", "}"}]}], "]"}]], "Input",
+ CellChangeTimes->{{3.746939557369047*^9, 3.7469395873777637`*^9}}],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{"b0", "\[Rule]", 
+     RowBox[{
+      RowBox[{"-", 
+       FractionBox["1", "4"]}], " ", 
+      SqrtBox[
+       RowBox[{"1", "-", 
+        RowBox[{"96", " ", 
+         SuperscriptBox["b12", "2"]}], "-", 
+        RowBox[{"96", " ", 
+         SuperscriptBox["b13", "2"]}], "-", 
+        RowBox[{"48", " ", 
+         SuperscriptBox["b14", "2"]}], "-", 
+        RowBox[{"48", " ", 
+         SuperscriptBox["b23", "2"]}], "-", 
+        RowBox[{"144", " ", 
+         SuperscriptBox["bb1", "2"]}], "-", 
+        RowBox[{"96", " ", "bb1", " ", "bb2"}], "-", 
+        RowBox[{"144", " ", 
+         SuperscriptBox["bb2", "2"]}], "-", 
+        RowBox[{"96", " ", "bb1", " ", "bb3"}], "-", 
+        RowBox[{"96", " ", "bb2", " ", "bb3"}], "-", 
+        RowBox[{"144", " ", 
+         SuperscriptBox["bb3", "2"]}]}]]}]}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"b0", "\[Rule]", 
+     RowBox[{
+      FractionBox["1", "4"], " ", 
+      SqrtBox[
+       RowBox[{"1", "-", 
+        RowBox[{"96", " ", 
+         SuperscriptBox["b12", "2"]}], "-", 
+        RowBox[{"96", " ", 
+         SuperscriptBox["b13", "2"]}], "-", 
+        RowBox[{"48", " ", 
+         SuperscriptBox["b14", "2"]}], "-", 
+        RowBox[{"48", " ", 
+         SuperscriptBox["b23", "2"]}], "-", 
+        RowBox[{"144", " ", 
+         SuperscriptBox["bb1", "2"]}], "-", 
+        RowBox[{"96", " ", "bb1", " ", "bb2"}], "-", 
+        RowBox[{"144", " ", 
+         SuperscriptBox["bb2", "2"]}], "-", 
+        RowBox[{"96", " ", "bb1", " ", "bb3"}], "-", 
+        RowBox[{"96", " ", "bb2", " ", "bb3"}], "-", 
+        RowBox[{"144", " ", 
+         SuperscriptBox["bb3", "2"]}]}]]}]}], "}"}]}], "}"}]], "Output",
+ CellChangeTimes->{{3.746939572636921*^9, 3.7469395881038055`*^9}}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"2", " ", "b0", " ", "b12"}], "-", 
+  RowBox[{"2", " ", 
+   SuperscriptBox["b12", "2"]}], "+", 
+  RowBox[{"2", " ", "b13", " ", "b14"}], "+", 
+  RowBox[{"2", " ", "b13", " ", "b23"}], "+", 
+  RowBox[{"6", " ", "b12", " ", "bb1"}], "-", 
+  RowBox[{"6", " ", 
+   SuperscriptBox["bb1", "2"]}], "+", 
+  RowBox[{"2", " ", "b12", " ", "bb2"}], "-", 
+  RowBox[{"4", " ", "bb1", " ", "bb2"}], "+", 
+  RowBox[{"2", " ", "b12", " ", "bb3"}], "-", 
+  RowBox[{"4", " ", "bb1", " ", "bb3"}], "+", 
+  RowBox[{"4", " ", "bb2", " ", "bb3"}], "-", 
+  RowBox[{"(", 
+   RowBox[{
+    RowBox[{"2", " ", "b0", " ", "b12"}], "-", 
+    RowBox[{"2", " ", 
+     SuperscriptBox["b12", "2"]}], "+", 
+    RowBox[{"2", " ", "b13", " ", "b14"}], "+", 
+    RowBox[{"2", " ", "b13", " ", "b23"}], "+", 
+    RowBox[{"6", " ", "b12", " ", "bb1"}], "-", 
+    RowBox[{"6", " ", 
+     SuperscriptBox["bb1", "2"]}], "+", 
+    RowBox[{"2", " ", "b12", " ", "bb2"}], "-", 
+    RowBox[{"4", " ", "bb1", " ", "bb2"}], "+", 
+    RowBox[{"2", " ", "b12", " ", "bb3"}], "-", 
+    RowBox[{"4", " ", "bb1", " ", "bb3"}], "+", 
+    RowBox[{"4", " ", "bb2", " ", "bb3"}]}], ")"}]}]], "Input",
+ CellChangeTimes->{{3.746939634447456*^9, 3.7469396355195174`*^9}}],
+
+Cell[BoxData["0"], "Output",
+ CellChangeTimes->{3.746939637910654*^9}]
 }, Open  ]]
 },
 WindowSize->{1016, 697},
@@ -899,8 +1019,8 @@ CellTagsIndex->{
 *)
 (*CellTagsIndex
 CellTagsIndex->{
- {"Info3746889379-8502230", 30306, 891},
- {"Info3746889398-8502230", 30415, 894}
+ {"Info3746889379-8502230", 34384, 1011},
+ {"Info3746889398-8502230", 34493, 1014}
  }
 *)
 (*NotebookFileOutline
@@ -962,6 +1082,14 @@ Cell[26537, 784, 1087, 30, 146, "Output"]
 Cell[CellGroupData[{
 Cell[27661, 819, 1232, 27, 76, "Input"],
 Cell[28896, 848, 1085, 30, 146, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[30018, 883, 886, 25, 55, "Input"],
+Cell[30907, 910, 1798, 50, 83, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[32742, 965, 1244, 30, 54, "Input"],
+Cell[33989, 997, 70, 1, 64, "Output"]
 }, Open  ]]
 }
 ]
