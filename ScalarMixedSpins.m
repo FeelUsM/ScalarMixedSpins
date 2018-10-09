@@ -8,7 +8,7 @@ Traces(4): fastTr1 fastTr fastTr10 gramMatrix symGramMatrix
 RhoGen(16): lastKP firstKP nextKP listKPs compoze swapToPerm generateGroup normolizeKP KPToExpr invariantKPsets squareInvariantKPsets KPsetsToExpr rhoGen invariantKPTsets listKPTs allKPs depsGen
 Linerear algebra(10): RowSimplify RowReduceUpTo RowReduceUpToShow RowReduceInfo LinDeps ApplyLinDeps LinDependent LinIndependent DeleteReduced
 ExplicitMatrices(13): getSi getSz getSp getSm getSx getSy KP scalar scalarSparse mixed mixedSparse explicit explicitSparse
-Utilities(5):  FE foundQ firstFound printTo plusToList getInt"
+Utilities(5):  FE foundQ firstFound printTo plusToList getInt AndRuleDelayed"
 
 (* ====== Utilities(5) ====== *)
 
@@ -18,6 +18,7 @@ printTo::usage = "printTo[file,expr] - \:0432\:044b\:0432\:043e\:0434 \:0438\:04
 FE::usage = "(ForEach): expr1~FE~expr2 === expr2/@expr1"
 plusToList::usage = "plusToList[expr] - return list of terms"
 getInt::usage="getInt[sum] - get integer from sum"
+AndRuleDelayed::usage="AndRuleDelayed[p1_,p2_,...,rhs_] is p1&p2&...:>rhs."
 Begin["`Private`"]
 
 foundQ[expr_,pattern_]:=(FirstPosition[expr,pattern]//Head//SymbolName)!="Missing";
@@ -27,6 +28,7 @@ plusToList[sum_]:=If[Head[sum]===Plus,List@@sum,{sum}];
 getInt[sum_]:=Module[{tmp=sum//plusToList//First},If[Head[tmp]===Integer,tmp,0]];
 myMonitor=Monitor;
 fakeMonitor[body_,smth_]:=body;
+SetAttributes[printTo,HoldAll]
 printTo[file_,expr_]:=Module[
 	{output = $Output,res},
 	If[Length[Streams[file]]==0,
@@ -41,7 +43,10 @@ printTo[file_,expr_]:=Module[
     ];
 	res
 ]
-SetAttributes[printTo,HoldAll]
+SetAttributes[AndRuleDelayed,HoldAll];
+SyntaxInformation[AndRuleDelayed]={"ArgumentsPattern"->{_,__}};
+AndRuleDelayed[patts__,rhs_]:=(total_:>
+	With[{result=Cases[{Table[total,{Length[{patts}]}]},{patts}:>rhs]},result[[1]]/;result=!={}]);
 
 End[]
 
@@ -50,7 +55,7 @@ End[]
 (* ====== Designations(7) ====== *)
 d::usage = "d[s_no_1,s_no_2] - scalar prodict of 2 Pauli matrices (orderless)"
 t::usage = "t[s_no_1,s_no_2,s_no_3] - mixed prodict of 3 Pauli matrices"
-it::isage = "it[a,b,c] == \[ImaginaryI] t[a,b,c]; use expr/.t[a_,b_,c_]:>-\[ImaginaryI] it[a,b,c]"
+it::usage = "it[a,b,c] == \[ImaginaryI] t[a,b,c]; use expr/.t[a_,b_,c_]:>-\[ImaginaryI] it[a,b,c]"
 p::usage = "p[args] - my own product for d[] and t[] (and it[]) with order"
 pp::usage = "pp[args] - my own product for d[] and t[] (and it[]) without order (orderless)"
 SetAttributes[d,Orderless]
@@ -987,7 +992,7 @@ invariantKPTsets[npair_,npart_,group_]:=Module[{
 	makeGroupSet,
 	gl=Length[group]
 },
-	makeGroupSet[curKP_]:=Module[{grKP,i,tmp,map=<||>},
+	makeGroupSet2[curKP_]:=Module[{grKP,i,tmp,map=<||>},
 		grKP={}; (* \:0441\:043e\:0437\:0434\:0430\:0435\:043c \:043d\:043e\:0432\:0443\:044e \:0433\:0440\:0443\:043f\:043f\:0443 \:041a\:041f *)
 		For[i=1,i<=gl,i++, (* \:0433\:0435\:043d\:0435\:0440\:0438\:0440\:0443\:0435\:043c \:0433\:0440\:0443\:043f\:043f\:0443 *)
 			tmp=(curKP/.group[[i]]);
@@ -1003,7 +1008,7 @@ invariantKPTsets[npair_,npart_,group_]:=Module[{
 		];
 		grKP
 	];
-	KPTSets[npair,npart,makeGroupSet]
+	KPTSets[npair,npart,makeGroupSet2]
 ]
 invariantKPTsets1[npair_,npart_,group_]:=Module[{
 		gl=Length[group],
@@ -1409,6 +1414,15 @@ explicitSparse[l_,N_,expr_]:=collectPP[expr]/.{pp[]:>pp[KP@@Array[SparseArray[ge
 End[]
 
 EndPackage[]
+
+
+
+
+
+
+
+
+
 
 
 
