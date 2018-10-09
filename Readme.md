@@ -1,3 +1,7 @@
+The library itself is ScalarMixedSpins.m
+Examples and usage of mostly all functions you can find in examples2.nb
+Other files contains various applications.
+
 
 * ScalarMixedSpins.m - общая библиотека функций
   * Common symbols and functions: d t p pp \[Delta] \[Epsilon] foundQ firstFound
@@ -10,7 +14,8 @@
   * BasisOverflow.nb
   * BasisOverflow-explicit.nb
 
-* variationalMethod.nb
+* variationalMethod.nb - wrong variational method
+* real
 
 * eigenValues.nb
 
