@@ -1,5 +1,7 @@
 The library itself is ScalarMixedSpins.m
+
 Examples and usage of mostly all functions you can find in examples2.nb
+
 Other files contains various applications.
 
 
